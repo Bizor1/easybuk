@@ -1,0 +1,144 @@
+Web Application Context for AI Development
+
+Application Name:
+WorkLink Africa
+
+Framework & Version:
+Next.js 14.1.0 (Full-stack)
+
+Application Purpose:
+WorkLink Africa connects users across Africa with skilled professionals (e.g., carpenters, electricians, plumbers, cleaners, teachers, etc.) and healthcare providers (doctors, nurses) for both physical appointments and remote consultations. The platform bridges the service gap by offering verified, trusted, and convenient access to local and remote workers.
+
+Platform Architecture:
+This platform uses a three-interface structure:
+
+1. **Client Front-End (Users who hire professionals)**
+
+* Register/login as a client.
+* Search skilled professionals by category, location, price, availability, and ratings.
+* Book services directly with real-time calendar and time-slot integration.
+* Prepay for services or use wallet credit.
+* View previous bookings, manage upcoming appointments.
+* Submit reviews and ratings after services.
+* Receive SMS/email notifications and booking confirmations.
+* Use secure chat after booking to communicate with service providers.
+
+2. **Jobseeker/Service Provider Front-End (Professionals)**
+
+* Register/login and complete profile (bio, certifications, portfolio, hourly rate, location).
+* Upload verification documents (ID, license).
+* Set working hours and availability calendar.
+* Receive and manage booking requests.
+* Video appointment integration for remote consultations.
+* Dashboard to track earnings, job history, and upcoming tasks.
+* In-app messaging system (available after booking).
+* Receive client reviews; profile visibility affected by performance.
+* Funds held in escrow and released upon confirmed completion.
+
+3. **Admin Dashboard (Platform Control Interface)**
+
+* Full user management: approve, ban, verify clients/providers.
+* Booking oversight: view and moderate all bookings.
+* Dispute management: resolve complaints, mediate issues.
+* Payment controls: track transactions, refunds, commissions.
+* Analytics dashboard: monitor platform activity, earnings, traffic.
+* Support tools: respond to inquiries, automate reminders.
+* Provider verification panel: approve uploaded credentials.
+
+Core Technical Requirements:
+
+1. User Management:
+
+* Secure authentication (NextAuth or custom JWT).
+* Role-based access (client, provider, admin).
+
+2. Search & Filter Functionality:
+
+* Advanced filtering (by skill, city, country, rating, availability, price).
+* Fast, indexed search experience (e.g., Algolia).
+
+3. Booking System:
+
+* Calendar and time-slot selection.
+* Escrow logic: client pays upfront, funds released post-confirmation.
+* Automatic reminders via SMS/WhatsApp/Email.
+* Cancellable based on policy (e.g., >12 hrs = full refund).
+
+4. Communication:
+
+* Chat opens only after payment.
+* Video integration (Zoom/Twilio/Jitsi).
+* Email and SMS integrations (SendGrid, Twilio).
+
+5. Payment Gateway:
+
+* Mobile money (MTN, M-Pesa, Airtel).
+* Debit/Credit card processing.
+* In-app wallet system.
+
+6. Review & Rating System:
+
+* Both parties can leave post-service reviews.
+* Average rating displayed publicly on profiles.
+
+7. Anti-Fraud and Platform Enforcement:
+
+* Masked phone/email until booking.
+* AI keyword flagging in chats (e.g., “pay direct”, “WhatsApp me”).
+* Auto warnings and bans for policy violations.
+* Emphasize loss of protection and reputation for off-platform transactions.
+
+8. Cancellation, Refunds & Disputes:
+
+* Client cancels early: full refund.
+* Client cancels late: partial/no refund.
+* Provider cancels: full refund to client and penalty warning.
+* Disputes trigger manual review via admin dashboard.
+
+9. Admin Controls:
+
+* Freeze accounts during investigation.
+* Set cancellation penalty rules.
+* Moderate content and chat transcripts.
+
+10. Technical Stack:
+
+* Framework: Next.js 14.1.0 (App Router)
+* Database: PostgreSQL or MongoDB
+* Authentication: NextAuth or custom JWT + RBAC
+* Payments: Stripe + Mobile Money APIs
+* Hosting: Vercel
+* notifications
+* Video
+
+11. UI/UX & Mobile Focus:
+
+* Mobile-first responsive layout.
+* Fast booking in under 60 seconds.
+* Easy registration and onboarding flows.
+* Minimal data usage with WhatsApp-style communication integration.
+
+Deployment Plan:
+
+* Use environment-based config (dev/staging/prod).
+* Edge caching and image optimization via Next.js.
+* CI/CD pipeline with Vercel auto-deploy.
+
+Trust & Compliance:
+
+* Enforce terms-of-use and payment lock-in.
+* Privacy compliance with GDPR where relevant.
+* Secure all sensitive data at rest and in transit.
+
+Flow Summary:
+
+1. Users register as either client or provider.
+2. Clients search, filter, and book services.
+3. Payment is made and held by platform.
+4. Providers fulfill service (in-person or via video).
+5. Clients confirm or platform auto-confirms.
+6. Funds released to provider (minus commission).
+7. Reviews collected.
+8. Admin moderates any disputes.
+
+This document serves as the full-stack context blueprint for AI-assisted development of WorkLink Africa using Next.js 14.1.0.

@@ -1,0 +1,594 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id               String            @id
+  email            String            @unique
+  emailVerified    DateTime?
+  name             String?
+  role             String            @default("ADMIN")
+  permissions      String[]
+  lastActive       DateTime          @default(now())
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime
+  AdminAction      AdminAction[]
+  UserAdminProfile UserAdminProfile?
+}
+
+model AdminAction {
+  id         String   @id
+  adminId    String
+  action     String
+  targetType String
+  targetId   String
+  reason     String?
+  createdAt  DateTime @default(now())
+  Admin      Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+}
+
+model AdminSettings {
+  id        String   @id
+  key       String   @unique
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+}
+
+model Booking {
+  id                 String          @id
+  clientId           String
+  providerId         String
+  serviceId          String?
+  title              String
+  description        String?
+  bookingType        BookingType
+  scheduledDate      DateTime
+  scheduledTime      String
+  duration           Int?
+  location           String?
+  latitude           Float?
+  longitude          Float?
+  totalAmount        Float
+  currency           String          @default("GHS")
+  commissionAmount   Float           @default(0.0)
+  providerAmount     Float           @default(0.0)
+  status             BookingStatus   @default(PENDING)
+  isPaid             Boolean         @default(false)
+  escrowReleased     Boolean         @default(false)
+  paymentMethod      String?
+  startedAt          DateTime?
+  completedAt        DateTime?
+  clientConfirmedAt  DateTime?
+  clientConfirmDeadline DateTime?
+  autoConfirmAt      DateTime?
+  cancellationReason String?
+  cancelledBy        String?
+  cancelledAt        DateTime?
+  emergencyContact   String?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime
+  Client             Client          @relation(fields: [clientId], references: [id])
+  ServiceProvider    ServiceProvider @relation(fields: [providerId], references: [id])
+  Service            Service?        @relation(fields: [serviceId], references: [id])
+  Dispute            Dispute?
+  Message            Message[]
+  Review             Review?
+  Transaction        Transaction[]
+}
+
+model Client {
+  id                                 String             @id
+  email                              String             @unique
+  emailVerified                      DateTime?
+  name                               String?
+  image                              String?
+  phone                              String?
+  phoneVerified                      Boolean            @default(false)
+  dateOfBirth                        DateTime?
+  status                             UserStatus         @default(PENDING_VERIFICATION)
+  country                            String             @default("Ghana")
+  city                               String?
+  address                            String?
+  latitude                           Float?
+  longitude                          Float?
+  profileCompleted                   Boolean            @default(false)
+  lastActive                         DateTime           @default(now())
+  createdAt                          DateTime           @default(now())
+  updatedAt                          DateTime
+  preferences                        Json?
+  emergencyContact                   String?
+  emergencyPhone                     String?
+  Booking                            Booking[]
+  ClientWallet                       ClientWallet?
+  Dispute                            Dispute[]
+  FileUpload                         FileUpload[]
+  Report_Report_reportedUserToClient Report[]           @relation("Report_reportedUserToClient")
+  Report_Report_reportedByToClient   Report[]           @relation("Report_reportedByToClient")
+  Review                             Review[]
+  Transaction                        Transaction[]
+  UserClientProfile                  UserClientProfile?
+}
+
+model ClientWallet {
+  id            String   @id
+  clientId      String   @unique
+  balance       Float    @default(0.0)
+  currency      String   @default("GHS")
+  escrowBalance Float    @default(0.0)
+  canWithdraw   Boolean  @default(true)
+  withdrawalPin String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime
+  Client        Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+model Dispute {
+  id           String          @id
+  bookingId    String          @unique
+  raisedBy     String
+  raisedByType String
+  type         DisputeType
+  status       DisputeStatus   @default(OPEN)
+  subject      String
+  description  String
+  evidence     String[]
+  resolution   String?
+  resolvedBy   String?
+  resolvedAt   DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime
+  Booking      Booking         @relation(fields: [bookingId], references: [id])
+  Client       Client          @relation(fields: [raisedBy], references: [id], map: "Dispute_client_fkey")
+  ServiceProvider_Dispute ServiceProvider @relation(fields: [raisedBy], references: [id], map: "Dispute_provider_fkey")
+}
+
+model FileUpload {
+  id           String          @id
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  url          String
+  type         FileType
+  uploaderId   String
+  uploaderType String
+  metadata     Json?
+  createdAt    DateTime        @default(now())
+  Client       Client          @relation(fields: [uploaderId], references: [id], map: "FileUpload_client_fkey")
+  ServiceProvider_FileUpload ServiceProvider @relation(fields: [uploaderId], references: [id], map: "FileUpload_provider_fkey")
+}
+
+model Message {
+  id          String      @id
+  content     String
+  senderId    String
+  senderType  String
+  receiverId  String
+  receiverType String
+  bookingId   String?
+  messageType MessageType @default(TEXT)
+  attachments String[]
+  isRead      Boolean     @default(false)
+  readAt      DateTime?
+  flagged     Boolean     @default(false)
+  flagReason  String?
+  createdAt   DateTime    @default(now())
+  Booking     Booking?    @relation(fields: [bookingId], references: [id])
+}
+
+model Notification {
+  id           String           @id
+  userId       String
+  userType     String
+  type         NotificationType
+  title        String
+  message      String
+  data         Json?
+  isRead       Boolean          @default(false)
+  readAt       DateTime?
+  sentViaEmail Boolean          @default(false)
+  sentViaSMS   Boolean          @default(false)
+  sentViaPush  Boolean          @default(false)
+  createdAt    DateTime         @default(now())
+}
+
+model PasswordResetToken {
+  id        String   @id
+  userId    String
+  token     String   @unique
+  expires   DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ProviderWallet {
+  id              String          @id
+  providerId      String          @unique
+  balance         Float           @default(0.0)
+  currency        String          @default("GHS")
+  escrowBalance   Float           @default(0.0)
+  canWithdraw     Boolean         @default(true)
+  withdrawalPin   String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime
+  ServiceProvider ServiceProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+}
+
+model Report {
+  id                                 String          @id
+  reportedBy                         String
+  reportedByType                     String
+  reportedUser                       String
+  reportedUserType                   String
+  type                               ReportType
+  status                             ReportStatus    @default(PENDING)
+  reason                             String
+  description                        String?
+  evidence                           String[]
+  action                             String?
+  resolvedBy                         String?
+  resolvedAt                         DateTime?
+  createdAt                          DateTime        @default(now())
+  Client_Report_reportedUserToClient Client          @relation("Report_reportedUserToClient", fields: [reportedUser], references: [id], map: "Report_clientReported_fkey")
+  Client_Report_reportedByToClient   Client          @relation("Report_reportedByToClient", fields: [reportedBy], references: [id], map: "Report_clientReporter_fkey")
+  ServiceProvider_Report_reportedUserToClient ServiceProvider @relation("Report_reportedUserToServiceProvider", fields: [reportedUser], references: [id], map: "Report_providerReported_fkey")
+  ServiceProvider_Report_reportedByToClient   ServiceProvider @relation("Report_reportedByToServiceProvider", fields: [reportedBy], references: [id], map: "Report_providerReporter_fkey")
+}
+
+model Review {
+  id                  String          @id
+  bookingId           String          @unique
+  clientId            String
+  providerId          String
+  overallRating       Int
+  qualityRating       Int?
+  timelinessRating    Int?
+  communicationRating Int?
+  valueRating         Int?
+  comment             String?
+  pros                String[]
+  cons                String[]
+  isVerified          Boolean         @default(false)
+  providerResponse    String?
+  respondedAt         DateTime?
+  createdAt           DateTime        @default(now())
+  Booking             Booking         @relation(fields: [bookingId], references: [id])
+  Client              Client          @relation(fields: [clientId], references: [id])
+  ServiceProvider     ServiceProvider @relation(fields: [providerId], references: [id])
+}
+
+model Service {
+  id                String          @id
+  name              String
+  description       String?
+  basePrice         Float
+  currency          String          @default("GHS")
+  pricingType       PricingType     @default(FIXED)
+  duration          Int?
+  category          ServiceCategory
+  tags              String[]
+  location          ServiceLocation @default(CLIENT_LOCATION)
+  supportedBookingTypes String[]    @default(["IN_PERSON"])
+  isActive          Boolean         @default(true)
+  requiresEquipment Boolean         @default(false)
+  equipmentList     String[]
+  images            String[]        @default([])
+  minimumNotice     Int?            @default(24)
+  serviceRadius     Float?          @default(10)
+  availableSlots    Int?            @default(8)
+  cancellationPolicy String?        @default("Free cancellation up to 24 hours before the service")
+  providerId        String
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime
+  Booking           Booking[]
+  ServiceProvider   ServiceProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+}
+
+model ServiceProvider {
+  id                                 String               @id
+  email                              String               @unique
+  emailVerified                      DateTime?
+  name                               String?
+  image                              String?
+  phone                              String?
+  phoneVerified                      Boolean              @default(false)
+  dateOfBirth                        DateTime?
+  status                             UserStatus           @default(PENDING_VERIFICATION)
+  country                            String               @default("Ghana")
+  city                               String?
+  address                            String?
+  latitude                           Float?
+  longitude                          Float?
+  profileCompleted                   Boolean              @default(false)
+  lastActive                         DateTime             @default(now())
+  createdAt                          DateTime             @default(now())
+  updatedAt                          DateTime
+  bio                                String?
+  category                           ServiceCategory
+  specializations                    String[]
+  hourlyRate                         Float?
+  currency                           String               @default("GHS")
+  experience                         String?
+  idDocumentUrl                      String?
+  licenseUrl                         String?
+  certificateUrls                    String[]
+  portfolioUrls                      String[]
+  verificationStatus                 VerificationStatus   @default(PENDING)
+  verifiedAt                         DateTime?
+  businessName                       String?
+  businessRegistration               String?
+  taxNumber                          String?
+  serviceRadius                      Float?
+  workingHours                       Json?
+  availableTimeSlots                 Json?
+  isAvailableForBooking              Boolean              @default(true)
+  isVerified                         Boolean              @default(false)
+  rating                             Float                @default(0.0)
+  totalReviews                       Int                  @default(0)
+  totalEarnings                      Float                @default(0.0)
+  completedBookings                  Int                  @default(0)
+  cancellationRate                   Float                @default(0.0)
+  responseTime                       Int?
+  isActive                           Boolean              @default(true)
+  suspendedUntil                     DateTime?
+  suspensionReason                   String?
+  Booking                            Booking[]
+  Dispute                            Dispute[]
+  FileUpload                         FileUpload[]
+  ProviderWallet                     ProviderWallet?
+  Report_Report_reportedUserToClient Report[]             @relation("Report_reportedUserToServiceProvider")
+  Report_Report_reportedByToClient   Report[]             @relation("Report_reportedByToServiceProvider")
+  Review                             Review[]
+  Service                            Service[]
+  Transaction                        Transaction[]
+  UserProviderProfile                UserProviderProfile?
+}
+
+model Transaction {
+  id            String            @id
+  userId        String
+  userType      String
+  bookingId     String?
+  type          TransactionType
+  amount        Float
+  currency      String            @default("GHS")
+  status        TransactionStatus @default(PENDING)
+  paymentMethod String?
+  gatewayRef    String?
+  phoneNumber   String?
+  description   String?
+  metadata      Json?
+  platformFee   Float?
+  processingFee Float?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime
+  Booking       Booking?          @relation(fields: [bookingId], references: [id])
+  Client        Client            @relation(fields: [userId], references: [id], map: "Transaction_client_fkey")
+  ServiceProvider_Transaction ServiceProvider   @relation(fields: [userId], references: [id], map: "Transaction_provider_fkey")
+}
+
+model User {
+  id                  String               @id
+  email               String               @unique
+  emailVerified       DateTime?
+  password            String?
+  googleId            String?              @unique
+  name                String?
+  image               String?
+  phone               String?
+  phoneVerified       Boolean              @default(false)
+  roles               UserRole[]           @default([])
+  status              UserStatus           @default(PENDING_VERIFICATION)
+  lastActive          DateTime             @default(now())
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime
+  PasswordResetToken  PasswordResetToken[]
+  UserAdminProfile    UserAdminProfile?
+  UserClientProfile   UserClientProfile?
+  UserProviderProfile UserProviderProfile?
+  VerificationToken   VerificationToken[]
+}
+
+model UserAdminProfile {
+  id        String   @id
+  userId    String   @unique
+  adminId   String   @unique
+  createdAt DateTime @default(now())
+  Admin     Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserClientProfile {
+  id        String   @id
+  userId    String   @unique
+  clientId  String   @unique
+  createdAt DateTime @default(now())
+  Client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserProviderProfile {
+  id              String          @id
+  userId          String          @unique
+  providerId      String          @unique
+  createdAt       DateTime        @default(now())
+  ServiceProvider ServiceProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  User            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  id         String   @id
+  userId     String?
+  identifier String
+  token      String   @unique
+  type       String
+  expires    DateTime
+  used       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  User       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([identifier, token])
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  AWAITING_CLIENT_CONFIRMATION
+  CANCELLED
+  DISPUTED
+  REFUNDED
+}
+
+enum BookingType {
+  IN_PERSON
+  REMOTE
+  VIDEO_CALL
+  PHONE_CALL
+}
+
+enum DisputeStatus {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+  ESCALATED
+  CLOSED
+}
+
+enum DisputeType {
+  SERVICE_QUALITY
+  PAYMENT_ISSUE
+  NO_SHOW
+  CANCELLATION
+  COMMUNICATION
+  OTHER
+}
+
+enum FileType {
+  PROFILE_IMAGE
+  DOCUMENT
+  CERTIFICATE
+  PORTFOLIO
+  MESSAGE_ATTACHMENT
+  DISPUTE_EVIDENCE
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  DOCUMENT
+  LOCATION
+  SYSTEM
+}
+
+enum NotificationType {
+  BOOKING_REQUEST
+  BOOKING_CONFIRMED
+  BOOKING_CANCELLED
+  BOOKING_REMINDER
+  PAYMENT_RECEIVED
+  PAYMENT_RELEASED
+  MESSAGE_RECEIVED
+  REVIEW_RECEIVED
+  VERIFICATION_UPDATE
+  SYSTEM_ANNOUNCEMENT
+  DISPUTE_CREATED
+  DISPUTE_RESOLVED
+  ACCOUNT_SUSPENDED
+  ACCOUNT_VERIFIED
+}
+
+enum PricingType {
+  FIXED
+  HOURLY
+  DAILY
+  PROJECT_BASED
+}
+
+enum ReportStatus {
+  PENDING
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+enum ReportType {
+  INAPPROPRIATE_BEHAVIOR
+  FRAUD
+  SPAM
+  HARASSMENT
+  UNSAFE_PRACTICES
+  TERMS_VIOLATION
+  OTHER
+}
+
+enum ServiceCategory {
+  HEALTHCARE
+  TECHNICAL_SERVICES
+  HOME_SERVICES
+  PROFESSIONAL_SERVICES
+  EDUCATION
+  CREATIVE_SERVICES
+  AUTOMOTIVE
+  BEAUTY_WELLNESS
+  EVENTS_ENTERTAINMENT
+  AGRICULTURE
+  SECURITY
+  DELIVERY_LOGISTICS
+}
+
+enum ServiceLocation {
+  CLIENT_LOCATION
+  PROVIDER_LOCATION
+  REMOTE
+  FLEXIBLE
+}
+
+enum TransactionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REVERSED
+}
+
+enum TransactionType {
+  BOOKING_PAYMENT
+  ESCROW_RELEASE
+  REFUND
+  COMMISSION
+  WITHDRAWAL
+  DEPOSIT
+  PENALTY
+}
+
+enum UserRole {
+  CLIENT
+  PROVIDER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+  BANNED
+  UNDER_REVIEW
+}
+
+enum VerificationStatus {
+  PENDING
+  IN_REVIEW
+  VERIFIED
+  REJECTED
+  EXPIRED
+}
