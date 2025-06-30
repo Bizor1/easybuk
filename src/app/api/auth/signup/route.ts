@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AuthService } from '@/lib/auth';
-import { SignupData } from '@/types/auth';
+// Remove top-level imports that might be causing issues
 
 // Mark this route as dynamic to handle request body and cookies
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
-    const body: SignupData = await request.json();
+    const body = await request.json();
 
     // Validate input
     if (!body.email || !body.password || !body.name || !body.role) {
@@ -42,7 +41,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Attempt signup
+    // Attempt signup - import AuthService dynamically
+    const { AuthService } = await import('@/lib/auth');
     const result = await AuthService.signup(body);
 
     if (!result.success) {

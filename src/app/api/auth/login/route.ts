@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AuthService } from '@/lib/auth';
-import { LoginCredentials } from '@/types/auth';
+// Remove top-level imports that might be causing issues
 
 // Mark this route as dynamic to handle request body and cookies
 export const dynamic = 'force-dynamic';
@@ -8,7 +7,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
   try {
     console.log('=== LOGIN REQUEST START ===');
-    const body: LoginCredentials = await request.json();
+    const body = await request.json();
     console.log('Login attempt for email:', body.email);
 
     // Validate input
@@ -19,7 +18,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Attempt login
+    // Attempt login - import AuthService dynamically
+    const { AuthService } = await import('@/lib/auth');
     const result = await AuthService.login(body);
     console.log('Login result success:', result.success);
     console.log('Login result has tokens:', !!result.tokens);
