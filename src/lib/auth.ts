@@ -1,10 +1,8 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { generateAccessToken, generateRefreshToken } from './jwt';
 import { UserRole } from '@/types/auth';
-
-const prisma = new PrismaClient();
 
 interface LoginCredentials {
   email: string;
@@ -108,7 +106,7 @@ export class AuthService {
 
       // Build profiles object according to AuthSession interface
       const profiles: any = {};
-      
+
       if (user.UserClientProfile?.Client) {
         profiles.client = {
           id: user.UserClientProfile.Client.id,
@@ -210,7 +208,7 @@ export class AuthService {
       // Update last active
       await prisma.user.update({
         where: { id: user.id },
-        data: { 
+        data: {
           lastActive: new Date(),
           updatedAt: new Date(),
         },
@@ -332,7 +330,7 @@ export class AuthService {
               status: 'PENDING_VERIFICATION',
               country: 'Ghana',
               profileCompleted: false,
-                              category: 'TECHNICAL_SERVICES', // Default category
+              category: 'TECHNICAL_SERVICES', // Default category
               verificationStatus: 'PENDING',
               isAvailableForBooking: false,
               isVerified: false,
@@ -415,7 +413,7 @@ export class AuthService {
         if (!user.googleId) {
           user = await prisma.user.update({
             where: { id: user.id },
-            data: { 
+            data: {
               googleId,
               updatedAt: new Date(),
               lastActive: new Date(),
@@ -425,7 +423,7 @@ export class AuthService {
           // Just update last active
           user = await prisma.user.update({
             where: { id: user.id },
-            data: { 
+            data: {
               lastActive: new Date(),
               updatedAt: new Date(),
             },
