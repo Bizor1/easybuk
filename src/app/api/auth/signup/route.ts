@@ -56,7 +56,9 @@ export async function POST(request: NextRequest) {
     try {
       console.log('📧 Automatically sending verification email to:', body.email);
 
-      const emailResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/auth/send-verification`, {
+      // Get the current origin from the request
+      const origin = request.headers.get('origin') || request.url.split('/api')[0];
+      const emailResponse = await fetch(`${origin}/api/auth/send-verification`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: body.email })
