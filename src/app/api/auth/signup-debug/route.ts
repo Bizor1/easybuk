@@ -30,9 +30,9 @@ export async function POST(request: NextRequest) {
             }, { status: 400 });
         }
 
-        // Step 3: Test bcrypt
-        console.log('🔍 Step 3: Testing bcrypt...');
-        const bcrypt = await import('bcrypt');
+        // Step 3: Test bcryptjs
+        console.log('🔍 Step 3: Testing bcryptjs...');
+        const bcrypt = await import('bcryptjs');
         const hashedPassword = await bcrypt.hash(body.password, 12);
         console.log('✅ Password hashed successfully, length:', hashedPassword.length);
 

@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
 
         // Import dependencies
         const { prisma } = await import('@/lib/prisma');
-        const bcrypt = await import('bcrypt');
+        const bcrypt = await import('bcryptjs');
         const { v4: uuidv4 } = await import('uuid');
         const { generateAccessToken, generateRefreshToken } = await import('@/lib/jwt');
 
