@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { getCurrentUser } from '@/lib/jwt';
 import { prisma } from '@/lib/prisma';
 
 export async function PUT(
@@ -7,7 +7,7 @@ export async function PUT(
     { params }: { params: { bookingId: string } }
 ) {
     try {
-        const token = await getToken({ req: request });
+        const token = getCurrentUser(request);
 
         if (!token?.userId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

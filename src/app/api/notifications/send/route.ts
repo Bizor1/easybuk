@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
-import { getToken } from 'next-auth/jwt';
+import { getCurrentUser } from '@/lib/jwt';
 import { prisma } from '@/lib/prisma';
 
 // Email templates
@@ -236,7 +236,7 @@ const createTransporter = () => {
 
 export async function POST(request: NextRequest) {
   try {
-    const token = await getToken({ req: request });
+    const token = getCurrentUser(request);
 
     if (!token?.userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
