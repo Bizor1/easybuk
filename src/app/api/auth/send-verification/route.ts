@@ -88,13 +88,15 @@ export async function POST(request: NextRequest) {
 
     // Send verification email
     try {
-      const verificationLink = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/auth/verify-email?token=${verificationToken}`;
+      // Get the current origin from the request
+      const origin = request.headers.get('origin') || request.url.split('/api')[0];
+      const verificationLink = `${origin}/auth/verify-email?token=${verificationToken}`;
 
       console.log('Attempting to send email to:', user.email);
       console.log('Verification link:', verificationLink);
-      console.log('NEXTAUTH_URL:', process.env.NEXTAUTH_URL);
+      console.log('Origin:', origin);
 
-      const emailResult = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/internal/send-email`, {
+      const emailResult = await fetch(`${origin}/api/internal/send-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
