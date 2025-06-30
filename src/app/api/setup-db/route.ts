@@ -24,9 +24,6 @@ export async function GET(request: NextRequest) {
             }, { status: 500 });
         }
 
-        console.log('📦 Generating Prisma client...');
-        await execAsync('npx prisma generate');
-
         console.log('🔄 Running database migrations...');
         await execAsync('npx prisma migrate deploy');
 
@@ -34,7 +31,8 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({
             success: true,
-            message: 'Database initialized successfully!',
+            message: 'Database migrations applied successfully!',
+            note: 'Prisma client was generated during build time',
             tablesCreated: [
                 'User', 'Client', 'ServiceProvider', 'Admin',
                 'Booking', 'Service', 'Review', 'Message',
