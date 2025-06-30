@@ -2,12 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { AuthService } from '@/lib/auth';
 import { LoginCredentials } from '@/types/auth';
 
+// Mark this route as dynamic to handle request body and cookies
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     console.log('=== LOGIN REQUEST START ===');
     const body: LoginCredentials = await request.json();
     console.log('Login attempt for email:', body.email);
-    
+
     // Validate input
     if (!body.email || !body.password) {
       return NextResponse.json(
@@ -42,7 +45,7 @@ export async function POST(request: NextRequest) {
       console.log('Setting cookies. isProduction:', isProduction);
       console.log('Access token length:', result.tokens.accessToken.length);
       console.log('Refresh token length:', result.tokens.refreshToken.length);
-      
+
       response.cookies.set('auth-token', result.tokens.accessToken, {
         httpOnly: true,
         secure: isProduction,
@@ -58,7 +61,7 @@ export async function POST(request: NextRequest) {
         maxAge: 30 * 24 * 60 * 60, // 30 days in seconds
         path: '/',
       });
-      
+
       console.log('Cookies set successfully');
     } else {
       console.log('WARNING: No tokens to set as cookies');

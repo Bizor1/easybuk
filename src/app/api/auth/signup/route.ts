@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { AuthService } from '@/lib/auth';
 import { SignupData } from '@/types/auth';
 
+// Mark this route as dynamic to handle request body and cookies
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const body: SignupData = await request.json();
