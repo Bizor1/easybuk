@@ -1,10 +1,23 @@
+'use client';
+
 import React from 'react';
-import VideoCall from './VideoCall';
+import dynamic from 'next/dynamic';
+
+// Dynamically import VideoCall with SSR disabled to prevent window errors
+const VideoCall = dynamic(() => import('./VideoCall'), {
+    ssr: false,
+    loading: () => (
+        <div className="flex flex-col items-center justify-center h-96 bg-gray-100 dark:bg-gray-800 rounded-lg">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-300 text-center">Loading video call...</p>
+        </div>
+    )
+});
 
 interface VideoCallModalProps {
     isOpen: boolean;
     onClose: () => void;
-    roomName: string;
+    bookingId: string;
     displayName: string;
     participantName?: string;
 }
@@ -12,7 +25,7 @@ interface VideoCallModalProps {
 export default function VideoCallModal({
     isOpen,
     onClose,
-    roomName,
+    bookingId,
     displayName,
     participantName
 }: VideoCallModalProps) {
@@ -71,7 +84,7 @@ export default function VideoCallModal({
                 {/* Video Call Content */}
                 <div className="h-full">
                     <VideoCall
-                        roomName={roomName}
+                        bookingId={bookingId}
                         displayName={displayName}
                         onCallEnd={handleCallEnd}
                         onCallStart={() => console.log('Video call started')}
@@ -96,7 +109,7 @@ export default function VideoCallModal({
                             </span>
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
-                            Room: easybuk-{roomName}
+                            Booking: {bookingId}
                         </div>
                     </div>
                 </div>

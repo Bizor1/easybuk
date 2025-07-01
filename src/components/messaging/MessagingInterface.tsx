@@ -4,7 +4,12 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import MessageBubble, { Message, MessageAttachment } from './MessageBubble';
 import MessageInput from './MessageInput';
-import CallModal from '../CallModal';
+import dynamic from 'next/dynamic';
+
+// Dynamically import CallModal with SSR disabled to prevent window errors
+const CallModal = dynamic(() => import('../CallModal'), {
+    ssr: false
+});
 import { useAuth } from '@/contexts/AuthContext';
 
 interface MessagingInterfaceProps {

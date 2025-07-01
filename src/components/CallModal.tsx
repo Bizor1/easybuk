@@ -1,5 +1,18 @@
+'use client';
+
 import React, { useState } from 'react';
-import CallInterface from './CallInterface';
+import dynamic from 'next/dynamic';
+
+// Dynamically import CallInterface with SSR disabled to prevent window errors
+const CallInterface = dynamic(() => import('./CallInterface'), {
+    ssr: false,
+    loading: () => (
+        <div className="flex flex-col items-center justify-center h-96 bg-gray-100 dark:bg-gray-800 rounded-lg">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-300 text-center">Loading call interface...</p>
+        </div>
+    )
+});
 
 interface CallModalProps {
     isOpen: boolean;

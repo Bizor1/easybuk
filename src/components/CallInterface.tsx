@@ -1,7 +1,22 @@
+'use client';
+
 import React, { useEffect, useRef, useState } from 'react';
 import { getJitsiConfig, createRoomName, initializeJitsiAPI } from '@/lib/jitsi-config';
+import dynamic from 'next/dynamic';
+
+// Dynamically import VideoCall with SSR disabled to prevent window errors
+const VideoCall = dynamic(() => import('./VideoCall'), {
+    ssr: false,
+    loading: () => (
+        <div className="flex flex-col items-center justify-center h-96 bg-gray-100 dark:bg-gray-800 rounded-lg">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-300 text-center">Loading video call...</p>
+        </div>
+    )
+});
 
 interface CallInterfaceProps {
+    bookingId?: string; // Add bookingId for Agora video calls
     roomName: string;
     displayName: string;
     callType: 'VIDEO_CALL' | 'PHONE_CALL';
@@ -9,18 +24,19 @@ interface CallInterfaceProps {
     onCallStart?: () => void;
 }
 
-export default function CallInterface({
+// Separate component for Jitsi calls to avoid hook ordering issues
+function JitsiCallInterface({
     roomName,
     displayName,
     callType,
     onCallEnd,
     onCallStart
-}: CallInterfaceProps) {
+}: Omit<CallInterfaceProps, 'bookingId'>) {
     const jitsiContainerRef = useRef<HTMLDivElement>(null);
     const [api, setApi] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const apiRef = useRef<any>(null); // Add ref to track API instance
+    const apiRef = useRef<any>(null);
 
     const isVideoCall = callType === 'VIDEO_CALL';
     const isAudioCall = callType === 'PHONE_CALL';
@@ -162,5 +178,39 @@ export default function CallInterface({
                 </div>
             )}
         </div>
+    );
+}
+
+export default function CallInterface({
+    bookingId,
+    roomName,
+    displayName,
+    callType,
+    onCallEnd,
+    onCallStart
+}: CallInterfaceProps) {
+    const isVideoCall = callType === 'VIDEO_CALL';
+
+    // For video calls, use Agora if bookingId is provided
+    if (isVideoCall && bookingId) {
+        return (
+            <VideoCall
+                bookingId={bookingId}
+                displayName={displayName}
+                onCallEnd={onCallEnd}
+                onCallStart={onCallStart}
+            />
+        );
+    }
+
+    // For audio calls or video calls without bookingId, use Jitsi
+    return (
+        <JitsiCallInterface
+            roomName={roomName}
+            displayName={displayName}
+            callType={callType}
+            onCallEnd={onCallEnd}
+            onCallStart={onCallStart}
+        />
     );
 } 
