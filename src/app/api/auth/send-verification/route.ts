@@ -11,38 +11,22 @@ export async function POST(request: NextRequest) {
   try {
     console.log('📥 EMAIL_VERIFICATION: Parsing request body');
 
-    // Get email from URL params first, then try body parsing
+    // Safely parse JSON body - handle empty/malformed requests
+    let body: any = {};
     let requestEmail = null;
 
-    // First, try to get email from URL parameters (signup flow)
-    const url = new URL(request.url);
-    const emailParam = url.searchParams.get('email');
-    if (emailParam) {
-      requestEmail = emailParam;
-      console.log('📧 EMAIL_VERIFICATION: Got email from URL params:', requestEmail);
-    } else {
-      console.log('📧 EMAIL_VERIFICATION: No email in URL params, trying request body...');
+    try {
+      const rawBody = await request.text();
+      console.log('📄 EMAIL_VERIFICATION: Raw request body length:', rawBody.length);
 
-      // Safely parse JSON body as fallback - handle already consumed body
-      let body: any = {};
-
-      try {
-        // Check if request body is still available
-        const contentType = request.headers.get('content-type');
-        console.log('📄 EMAIL_VERIFICATION: Content-Type:', contentType);
-
-        if (contentType && contentType.includes('application/json')) {
-          // Try to read JSON body
-          body = await request.json();
-          requestEmail = body?.email || null;
-          console.log('📧 EMAIL_VERIFICATION: Extracted email from JSON body:', requestEmail);
-        } else {
-          console.log('⚠️ EMAIL_VERIFICATION: No JSON content-type, skipping body parsing');
-        }
-      } catch (jsonError) {
-        console.log('⚠️ EMAIL_VERIFICATION: Body parsing failed - likely already consumed by middleware');
-        console.log('⚠️ EMAIL_VERIFICATION: Parse error:', jsonError instanceof Error ? jsonError.message : 'Unknown');
+      if (rawBody && rawBody.trim()) {
+        body = JSON.parse(rawBody);
+        requestEmail = body?.email || null;
+        console.log('📧 EMAIL_VERIFICATION: Extracted email:', requestEmail);
       }
+    } catch (jsonError) {
+      console.log('⚠️ EMAIL_VERIFICATION: No JSON body or malformed JSON - treating as authenticated request');
+      // This is fine - might be an authenticated request without body
     }
 
     // Try to get user from token first (for authenticated requests)
@@ -166,13 +150,16 @@ export async function POST(request: NextRequest) {
       console.log('📊 EMAIL_VERIFICATION: Email API response status:', emailResult.status);
       console.log('📊 EMAIL_VERIFICATION: Email API response ok:', emailResult.ok);
 
+      // Read response body only once
+      const responseText = await emailResult.text();
+      console.log('📄 EMAIL_VERIFICATION: Raw email API response length:', responseText.length);
+
       let emailResponse;
       try {
-        emailResponse = await emailResult.json();
+        emailResponse = JSON.parse(responseText);
         console.log('📦 EMAIL_VERIFICATION: Email API response data:', emailResponse);
       } catch (parseError) {
         console.error('❌ EMAIL_VERIFICATION: Failed to parse email API response as JSON:', parseError);
-        const responseText = await emailResult.text();
         console.error('📄 EMAIL_VERIFICATION: Raw email API response:', responseText.substring(0, 500));
         throw new Error(`Email API returned non-JSON response: ${responseText.substring(0, 100)}`);
       }

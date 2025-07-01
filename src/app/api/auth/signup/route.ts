@@ -107,10 +107,10 @@ export async function POST(request: NextRequest) {
 
       console.log('🌐 SIGNUP: Using origin for email API call:', origin);
 
-      const emailResponse = await fetch(`${origin}/api/auth/send-verification?email=${encodeURIComponent(body.email)}`, {
+      const emailResponse = await fetch(`${origin}/api/auth/send-verification`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-        // No body needed since email is in URL params
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: body.email })
       });
       console.log('📧 SIGNUP: Email API response status:', emailResponse.status);
 
