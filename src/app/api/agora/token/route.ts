@@ -30,6 +30,37 @@ export async function POST(request: NextRequest) {
 
         console.log('🔍 AGORA_TOKEN: Validating booking access for user:', tokenPayload.userId, 'bookingId:', bookingId);
 
+        // First, resolve the user's client and provider profile IDs
+        console.log('🔗 AGORA_TOKEN: Resolving user profile relationships...');
+        const userProfiles = await prisma.user.findUnique({
+            where: { id: tokenPayload.userId },
+            include: {
+                UserClientProfile: {
+                    include: { Client: true }
+                },
+                UserProviderProfile: {
+                    include: { ServiceProvider: true }
+                }
+            }
+        });
+
+        if (!userProfiles) {
+            console.log('❌ AGORA_TOKEN: User not found:', tokenPayload.userId);
+            return NextResponse.json(
+                { error: 'User not found' },
+                { status: 404 }
+            );
+        }
+
+        const userClientId = userProfiles.UserClientProfile?.clientId;
+        const userProviderId = userProfiles.UserProviderProfile?.providerId;
+
+        console.log('👤 AGORA_TOKEN: User profile resolution:', {
+            userId: tokenPayload.userId,
+            clientId: userClientId || 'None',
+            providerId: userProviderId || 'None'
+        });
+
         // First, let's find the booking without user restrictions to see what's there
         const bookingInfo = await prisma.booking.findUnique({
             where: { id: bookingId },
@@ -48,14 +79,28 @@ export async function POST(request: NextRequest) {
             providerName: bookingInfo.ServiceProvider?.name
         } : 'NOT FOUND');
 
-        // Validate that user is part of this booking
+        // Build access conditions using resolved profile IDs
+        const accessConditions = [];
+        if (userClientId) {
+            accessConditions.push({ clientId: userClientId });
+        }
+        if (userProviderId) {
+            accessConditions.push({ providerId: userProviderId });
+        }
+
+        if (accessConditions.length === 0) {
+            console.log('❌ AGORA_TOKEN: User has no client or provider profiles');
+            return NextResponse.json(
+                { error: 'User has no valid profiles for booking access' },
+                { status: 403 }
+            );
+        }
+
+        // Validate that user is part of this booking using resolved profile IDs
         const booking = await prisma.booking.findFirst({
             where: {
                 id: bookingId,
-                OR: [
-                    { clientId: tokenPayload.userId },
-                    { providerId: tokenPayload.userId }
-                ],
+                OR: accessConditions,
                 status: {
                     in: ['CONFIRMED', 'IN_PROGRESS'] // Allow video calls for confirmed and in-progress bookings
                 }
@@ -74,9 +119,11 @@ export async function POST(request: NextRequest) {
             // Additional debugging
             if (bookingInfo) {
                 console.log('📋 AGORA_TOKEN: Booking exists but access denied. Checking criteria:');
-                console.log('  - User matches clientId?', bookingInfo.clientId === tokenPayload.userId);
-                console.log('  - User matches providerId?', bookingInfo.providerId === tokenPayload.userId);
+                console.log('  - User clientId matches booking clientId?', userClientId && bookingInfo.clientId === userClientId);
+                console.log('  - User providerId matches booking providerId?', userProviderId && bookingInfo.providerId === userProviderId);
                 console.log('  - Status valid?', ['CONFIRMED', 'IN_PROGRESS'].includes(bookingInfo.status));
+                console.log('  - User has client profile?', !!userClientId);
+                console.log('  - User has provider profile?', !!userProviderId);
             }
 
             return NextResponse.json(
