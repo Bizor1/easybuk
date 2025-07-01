@@ -89,10 +89,22 @@ export async function POST(request: NextRequest) {
     // Automatically send verification email after successful signup
     console.log('📧 SIGNUP: Starting verification email process');
     try {
+      // Add small delay to ensure database transaction is fully committed
+      console.log('⏱️ SIGNUP: Adding small delay to prevent race conditions');
+      await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
+
       console.log('📧 SIGNUP: Automatically sending verification email to:', body.email);
 
-      // Get the current origin from the request
-      const origin = request.headers.get('origin') || request.url.split('/api')[0];
+      // Get the current origin from the request - ensure production URL on Vercel
+      let origin = request.headers.get('origin') || request.url.split('/api')[0];
+
+      // Fix for Vercel deployment - always use production URL
+      if (process.env.VERCEL_URL) {
+        origin = `https://${process.env.VERCEL_URL}`;
+      } else if (process.env.NODE_ENV === 'production' && !origin.includes('easybuk.vercel.app')) {
+        origin = 'https://easybuk.vercel.app';
+      }
+
       console.log('🌐 SIGNUP: Using origin for email API call:', origin);
 
       const emailResponse = await fetch(`${origin}/api/auth/send-verification`, {
