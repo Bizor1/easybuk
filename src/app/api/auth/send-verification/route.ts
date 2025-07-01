@@ -112,15 +112,8 @@ export async function POST(request: NextRequest) {
     // Send verification email
     console.log('📧 EMAIL_VERIFICATION: Starting email sending process');
     try {
-      // Get the current origin from the request - ensure production URL on Vercel
-      let origin = request.headers.get('origin') || request.url.split('/api')[0];
-
-      // Fix for Vercel deployment - always use production URL
-      if (process.env.VERCEL_URL) {
-        origin = `https://${process.env.VERCEL_URL}`;
-      } else if (process.env.NODE_ENV === 'production' && !origin.includes('easybuk.vercel.app')) {
-        origin = 'https://easybuk.vercel.app';
-      }
+      // Always use the main production URL for consistency
+      const origin = 'https://easybuk.vercel.app';
 
       const verificationLink = `${origin}/auth/verify-email?token=${verificationToken}`;
 
@@ -129,53 +122,80 @@ export async function POST(request: NextRequest) {
       console.log('   - Origin:', origin);
       console.log('   - Verification link:', verificationLink);
 
-      console.log('📡 EMAIL_VERIFICATION: Making request to internal email API');
-      const emailPayload = {
-        to: user.email,
-        type: 'email_verification',
-        data: {
-          userName: user.name,
-          verificationLink: verificationLink,
-          verificationToken
-        }
-      };
-      console.log('📦 EMAIL_VERIFICATION: Email payload prepared');
+      // Use direct email approach to avoid internal fetch routing issues
+      console.log('📧 EMAIL_VERIFICATION: Using direct email approach');
 
-      const emailResult = await fetch(`${origin}/api/internal/send-email`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(emailPayload)
-      });
-
-      console.log('📊 EMAIL_VERIFICATION: Email API response status:', emailResult.status);
-      console.log('📊 EMAIL_VERIFICATION: Email API response ok:', emailResult.ok);
-
-      // Read response body only once
-      const responseText = await emailResult.text();
-      console.log('📄 EMAIL_VERIFICATION: Raw email API response length:', responseText.length);
-
-      let emailResponse;
       try {
-        emailResponse = JSON.parse(responseText);
-        console.log('📦 EMAIL_VERIFICATION: Email API response data:', emailResponse);
-      } catch (parseError) {
-        console.error('❌ EMAIL_VERIFICATION: Failed to parse email API response as JSON:', parseError);
-        console.error('📄 EMAIL_VERIFICATION: Raw email API response:', responseText.substring(0, 500));
-        throw new Error(`Email API returned non-JSON response: ${responseText.substring(0, 100)}`);
+        const nodemailer = await import('nodemailer');
+
+        const emailUser = process.env.EMAIL_SERVER_USER;
+        const emailPass = process.env.EMAIL_SERVER_PASSWORD;
+
+        if (!emailUser || !emailPass) {
+          throw new Error('SMTP credentials not configured');
+        }
+
+        console.log('📧 EMAIL_VERIFICATION: Creating transporter...');
+        const transporter = nodemailer.default.createTransporter({
+          host: 'smtp.gmail.com',
+          port: 587,
+          secure: false,
+          auth: { user: emailUser, pass: emailPass },
+        });
+
+        const htmlContent = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+              <h1 style="color: white; margin: 0;">EasyBuk</h1>
+            </div>
+            <div style="padding: 30px; background: #f8f9fa;">
+              <h2 style="color: #333;">Hi ${user.name || 'there'}! 👋</h2>
+              <p style="font-size: 16px; line-height: 1.6; color: #555;">
+                Please verify your email address to complete your EasyBuk account setup.
+              </p>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${verificationLink}" 
+                   style="background: #007bff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                  Verify Email Address
+                </a>
+              </div>
+              <p style="color: #666; font-size: 14px;">
+                If the button doesn't work, copy and paste this link into your browser:<br>
+                <a href="${verificationLink}" style="color: #007bff;">${verificationLink}</a>
+              </p>
+              <p style="color: #666; font-size: 14px;">
+                This verification link will expire in 24 hours for security reasons.
+              </p>
+            </div>
+            <div style="padding: 20px; text-align: center; color: #888; background: #e9ecef;">
+              <p style="margin: 0; font-size: 14px;">
+                This is an automated message from EasyBuk. Please do not reply to this email.
+              </p>
+            </div>
+          </div>
+        `;
+
+        console.log('📧 EMAIL_VERIFICATION: Sending email directly via SMTP...');
+        const result = await transporter.sendMail({
+          from: `"EasyBuk" <${emailUser}>`,
+          to: user.email,
+          subject: '✉️ Verify Your EasyBuk Account Email',
+          html: htmlContent
+        });
+
+        console.log('✅ EMAIL_VERIFICATION: Direct email sent successfully:', result.messageId);
+
+        return NextResponse.json({
+          success: true,
+          message: 'Verification email sent successfully! Please check your inbox.',
+          verificationToken: verificationToken,
+          verificationLink: verificationLink
+        });
+
+      } catch (directEmailError) {
+        console.error('❌ EMAIL_VERIFICATION: Direct email failed:', directEmailError);
+        throw new Error(`Direct email failed: ${directEmailError instanceof Error ? directEmailError.message : 'Unknown error'}`);
       }
-
-      if (!emailResult.ok) {
-        throw new Error(`Email sending failed: ${emailResponse.error || 'Unknown error'}`);
-      }
-
-      console.log('✅ Email sent successfully!');
-
-      return NextResponse.json({
-        success: true,
-        message: 'Verification email sent successfully! Please check your inbox.',
-        verificationToken: verificationToken, // For demo purposes only
-        verificationLink: verificationLink // For demo purposes only
-      });
 
     } catch (emailError) {
       console.error('❌ Failed to send verification email:', emailError);

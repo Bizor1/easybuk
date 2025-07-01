@@ -2,22 +2,18 @@ import fetch from 'node-fetch';
 
 const VERCEL_URL = 'https://easybuk.vercel.app';
 
-async function testEmailAPI() {
-  console.log('🧪 Testing Email API Directly...\n');
+async function testVerificationAPI() {
+  console.log('🧪 Testing Verification API...\n');
 
   try {
-    const response = await fetch(`${VERCEL_URL}/api/internal/send-email`, {
+    const response = await fetch(`${VERCEL_URL}/api/auth/send-verification`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Origin': VERCEL_URL
       },
       body: JSON.stringify({
-        to: 'bizorebenezer@gmail.com',
-        type: 'email_verification',
-        data: {
-          userName: 'Test User',
-          verificationLink: 'https://easybuk.vercel.app/auth/verify-email?token=test123'
-        }
+        email: 'bizorebenezer@gmail.com'
       })
     });
 
@@ -42,4 +38,4 @@ async function testEmailAPI() {
   }
 }
 
-testEmailAPI(); 
+testVerificationAPI(); 
