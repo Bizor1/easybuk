@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { loadJitsiScript, getJitsiConfig, createRoomName } from '@/lib/jitsi-config';
+import { getJitsiConfig, createRoomName, initializeJitsiAPI } from '@/lib/jitsi-config';
 
 interface CallInterfaceProps {
     roomName: string;
@@ -29,7 +29,6 @@ export default function CallInterface({
         const initializeJitsi = async () => {
             try {
                 setIsLoading(true);
-                await loadJitsiScript();
 
                 if (!jitsiContainerRef.current) return;
 
@@ -46,7 +45,7 @@ export default function CallInterface({
                     }
                 };
 
-                const jitsiApi = new window.JitsiMeetExternalAPI(config.domain, options);
+                const jitsiApi = await initializeJitsiAPI(options);
 
                 // Event listeners
                 jitsiApi.addEventListener('videoConferenceJoined', () => {
