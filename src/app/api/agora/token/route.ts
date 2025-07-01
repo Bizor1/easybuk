@@ -136,6 +136,22 @@ export async function POST(request: NextRequest) {
             });
             console.log('❌ AGORA_TOKEN: Booking requested:', bookingId);
 
+            // Collect debug information
+            const debugInfo = {
+                timestamp: new Date().toISOString(),
+                user: {
+                    userId: tokenPayload.userId,
+                    email: tokenPayload.email,
+                    roles: tokenPayload.roles
+                },
+                requestedBookingId: bookingId,
+                profileResolution: {
+                    userId: tokenPayload.userId,
+                    resolvedClientId: userClientId || 'NONE',
+                    resolvedProviderId: userProviderId || 'NONE'
+                }
+            };
+
             // Additional debugging
             if (bookingInfo) {
                 console.log('📋 AGORA_TOKEN: Booking exists, analyzing why access was denied:');
@@ -173,13 +189,47 @@ export async function POST(request: NextRequest) {
                     bookingInValidStatus: statusValid,
                     overallAccess: (clientIdMatch || providerIdMatch) && statusValid
                 });
+
+                // Add booking info to debug response
+                debugInfo.booking = {
+                    exists: true,
+                    id: bookingInfo.id,
+                    status: bookingInfo.status,
+                    clientId: bookingInfo.clientId,
+                    providerId: bookingInfo.providerId,
+                    clientName: bookingInfo.Client?.name,
+                    providerName: bookingInfo.ServiceProvider?.name
+                };
+
+                debugInfo.accessCheck = {
+                    userClientIdMatchesBookingClientId: clientIdMatch,
+                    userProviderIdMatchesBookingProviderId: providerIdMatch,
+                    statusValid: statusValid,
+                    userHasClientProfile: !!userClientId,
+                    userHasProviderProfile: !!userProviderId,
+                    reasonForDenial: {
+                        hasValidProfile: !!(userClientId || userProviderId),
+                        isPartOfBooking: clientIdMatch || providerIdMatch,
+                        bookingInValidStatus: statusValid,
+                        overallAccessShouldBe: (clientIdMatch || providerIdMatch) && statusValid
+                    }
+                };
             } else {
                 console.log('📋 AGORA_TOKEN: Booking does not exist with ID:', bookingId);
+                debugInfo.booking = {
+                    exists: false,
+                    requestedId: bookingId
+                };
             }
 
             console.log('❌ AGORA_TOKEN: ===============================================');
+
+            // Return debug info in response for easier diagnosis
             return NextResponse.json(
-                { error: 'Booking not found or access denied' },
+                {
+                    error: 'Booking not found or access denied',
+                    debug: debugInfo
+                },
                 { status: 403 }
             );
         }
