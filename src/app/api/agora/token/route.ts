@@ -38,7 +38,9 @@ export async function POST(request: NextRequest) {
                     { clientId: tokenPayload.userId },
                     { providerId: tokenPayload.userId }
                 ],
-                status: 'CONFIRMED' // Only allow video calls for confirmed bookings
+                status: {
+                    in: ['CONFIRMED', 'IN_PROGRESS'] // Allow video calls for confirmed and in-progress bookings
+                }
             },
             include: {
                 Client: true,
@@ -47,7 +49,7 @@ export async function POST(request: NextRequest) {
         });
 
         if (!booking) {
-            console.log('❌ AGORA_TOKEN: Booking not found or user not authorized');
+            console.log('❌ AGORA_TOKEN: Booking not found, user not authorized, or booking not in valid state (CONFIRMED/IN_PROGRESS)');
             return NextResponse.json(
                 { error: 'Booking not found or access denied' },
                 { status: 403 }
