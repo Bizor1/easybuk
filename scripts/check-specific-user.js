@@ -2,89 +2,80 @@ const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
-async function checkUser() {
-    try {
-        const userId = 'cec8c0a2-b226-40fc-b082-9d56dd648cbe';
-        
-        console.log('🔍 Looking for user:', userId);
-        
-        const user = await prisma.user.findUnique({
-            where: { id: userId },
-            include: {
-                UserClientProfile: {
-                    include: { Client: true }
-                },
-                UserProviderProfile: {
-                    include: { ServiceProvider: true }
-                },
-                UserAdminProfile: {
-                    include: { Admin: true }
-                }
-            }
-        });
+async function checkSpecificUser() {
+  console.log('🔍 Checking for specific user: bizorebenezer@gmail.com');
+  
+  try {
+    const user = await prisma.user.findUnique({
+      where: { email: 'bizorebenezer@gmail.com' },
+      include: {
+        UserClientProfile: {
+          include: {
+            Client: {
+              include: {
+                ClientWallet: true,
+              },
+            },
+          },
+        },
+        UserProviderProfile: {
+          include: {
+            ServiceProvider: {
+              include: {
+                ProviderWallet: true,
+              },
+            },
+          },
+        },
+      },
+    });
 
-        if (!user) {
-            console.log('❌ User not found with ID:', userId);
-            
-            // Try to find any users with pending email verification
-            const unverifiedUsers = await prisma.user.findMany({
-                where: { emailVerified: false },
-                select: {
-                    id: true,
-                    email: true,
-                    name: true,
-                    emailVerified: true,
-                    createdAt: true
-                }
-            });
-            
-            console.log('\n📧 Unverified users:');
-            unverifiedUsers.forEach((u, index) => {
-                console.log(`${index + 1}. ${u.email} - ${u.name} - ID: ${u.id}`);
-                console.log(`   Created: ${u.createdAt}`);
-            });
-            
-            return;
+    if (user) {
+      console.log('✅ User found in database:');
+      console.log('👤 User ID:', user.id);
+      console.log('📧 Email:', user.email);
+      console.log('👤 Name:', user.name);
+      console.log('📞 Phone:', user.phone);
+      console.log('🏷️ Roles:', user.roles);
+      console.log('✅ Email Verified:', user.emailVerified);
+      console.log('📱 Phone Verified:', user.phoneVerified);
+      console.log('📊 Status:', user.status);
+      console.log('🕒 Created:', user.createdAt);
+      console.log('🕒 Last Active:', user.lastActive);
+      
+      if (user.UserClientProfile) {
+        console.log('🏠 Client Profile Found:');
+        console.log('   - Client ID:', user.UserClientProfile.Client.id);
+        console.log('   - Profile Completed:', user.UserClientProfile.Client.profileCompleted);
+        console.log('   - Client Status:', user.UserClientProfile.Client.status);
+        if (user.UserClientProfile.Client.ClientWallet) {
+          console.log('   - Wallet Balance:', user.UserClientProfile.Client.ClientWallet.balance);
         }
-
-        console.log('✅ User found!');
-        console.log('📧 Email:', user.email);
-        console.log('👤 Name:', user.name);
-        console.log('✉️ Email Verified:', user.emailVerified ? 'Yes' : 'No');
-        console.log('📅 Created:', user.createdAt);
-        console.log('🏷️ Roles:', user.roles);
-        
-        if (user.UserClientProfile) {
-            console.log('🛍️ Has Client profile');
+      }
+      
+      if (user.UserProviderProfile) {
+        console.log('🏢 Provider Profile Found:');
+        console.log('   - Provider ID:', user.UserProviderProfile.ServiceProvider.id);
+        console.log('   - Profile Completed:', user.UserProviderProfile.ServiceProvider.profileCompleted);
+        console.log('   - Verification Status:', user.UserProviderProfile.ServiceProvider.verificationStatus);
+        if (user.UserProviderProfile.ServiceProvider.ProviderWallet) {
+          console.log('   - Wallet Balance:', user.UserProviderProfile.ServiceProvider.ProviderWallet.balance);
         }
-        if (user.UserProviderProfile) {
-            console.log('🔧 Has Service Provider profile');
-        }
-        if (user.UserAdminProfile) {
-            console.log('👨‍💼 Has Admin profile');
-        }
-
-        // Check verification tokens
-        const tokens = await prisma.verificationToken.findMany({
-            where: { userId: user.id },
-            orderBy: { createdAt: 'desc' }
-        });
-
-        console.log('\n🎫 Verification tokens:');
-        if (tokens.length === 0) {
-            console.log('   No verification tokens found');
-        } else {
-            tokens.forEach((token, index) => {
-                console.log(`   ${index + 1}. Type: ${token.type}, Expires: ${token.expires}`);
-                console.log(`      Token: ${token.token.substring(0, 20)}...`);
-            });
-        }
-
-    } catch (error) {
-        console.error('❌ Error:', error);
-    } finally {
-        await prisma.$disconnect();
+      }
+      
+      console.log('\n❌ This explains the 400 error: User already exists!');
+      console.log('💡 The user should try logging in instead of signing up.');
+      
+    } else {
+      console.log('❌ User not found in database');
+      console.log('💡 The user should be able to sign up with this email.');
     }
+
+  } catch (error) {
+    console.error('❌ Error checking user:', error);
+  } finally {
+    await prisma.$disconnect();
+  }
 }
 
-checkUser(); 
+checkSpecificUser(); 

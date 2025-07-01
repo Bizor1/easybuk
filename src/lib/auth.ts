@@ -242,15 +242,26 @@ export class AuthService {
    * Sign up a new user
    */
   static async signup(data: SignupData): Promise<AuthResult> {
+    console.log('🏁 AuthService.signup: Starting signup process');
     try {
       const { email, password, name, role, phone } = data;
+      console.log('📝 AuthService.signup: Data received:', {
+        email,
+        name,
+        role,
+        hasPhone: !!phone,
+        passwordLength: password.length
+      });
 
       // Check if user already exists
+      console.log('🔍 AuthService.signup: Checking if user exists');
       const existingUser = await prisma.user.findUnique({
         where: { email },
       });
+      console.log('📊 AuthService.signup: User exists check result:', !!existingUser);
 
       if (existingUser) {
+        console.log('❌ AuthService.signup: User already exists');
         return {
           success: false,
           error: 'User with this email already exists',
@@ -258,11 +269,15 @@ export class AuthService {
       }
 
       // Hash password
+      console.log('🔐 AuthService.signup: Hashing password');
       const hashedPassword = await bcrypt.hash(password, 12);
+      console.log('✅ AuthService.signup: Password hashed successfully');
 
       // Create user in transaction
+      console.log('💾 AuthService.signup: Starting database transaction');
       const result = await prisma.$transaction(async (tx) => {
         // Create user
+        console.log('👤 AuthService.signup: Creating user record');
         const user = await tx.user.create({
           data: {
             id: uuidv4(),
@@ -279,9 +294,11 @@ export class AuthService {
             updatedAt: new Date(),
           },
         });
+        console.log('✅ AuthService.signup: User created with ID:', user.id);
 
         // Create appropriate profile and linked entity
         if (role === 'CLIENT') {
+          console.log('🏠 AuthService.signup: Creating client profile');
           const client = await tx.client.create({
             data: {
               id: uuidv4(),
@@ -297,7 +314,9 @@ export class AuthService {
               updatedAt: new Date(),
             },
           });
+          console.log('✅ AuthService.signup: Client created with ID:', client.id);
 
+          console.log('🔗 AuthService.signup: Creating user-client profile link');
           await tx.userClientProfile.create({
             data: {
               id: uuidv4(),
@@ -306,7 +325,9 @@ export class AuthService {
               createdAt: new Date(),
             },
           });
+          console.log('✅ AuthService.signup: User-client profile link created');
 
+          console.log('💰 AuthService.signup: Creating client wallet');
           await tx.clientWallet.create({
             data: {
               id: uuidv4(),
@@ -319,7 +340,9 @@ export class AuthService {
               updatedAt: new Date(),
             },
           });
+          console.log('✅ AuthService.signup: Client wallet created');
         } else if (role === 'PROVIDER') {
+          console.log('🏢 AuthService.signup: Creating provider profile');
           const provider = await tx.serviceProvider.create({
             data: {
               id: uuidv4(),
@@ -371,24 +394,38 @@ export class AuthService {
 
         return user;
       });
+      console.log('🎉 AuthService.signup: Database transaction completed successfully');
 
       // Generate tokens
+      console.log('🎫 AuthService.signup: Generating tokens');
       const tokens = this.generateTokens({
         userId: result.id,
         email: result.email,
         roles: result.roles,
       });
+      console.log('✅ AuthService.signup: Tokens generated successfully');
 
       // Get full user session
+      console.log('👤 AuthService.signup: Getting user session');
       const userSession = await this.getUserSession(result.id);
+      console.log('✅ AuthService.signup: User session retrieved:', {
+        userId: userSession?.userId,
+        email: userSession?.email,
+        activeRole: userSession?.activeRole
+      });
 
+      console.log('🎊 AuthService.signup: Signup completed successfully');
       return {
         success: true,
         user: userSession,
         tokens,
       };
     } catch (error) {
-      console.error('Signup error:', error);
+      console.error('🚨 AuthService.signup: Signup error:', error);
+      console.error('🚨 AuthService.signup: Error name:', error instanceof Error ? error.name : 'Unknown');
+      console.error('🚨 AuthService.signup: Error message:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('🚨 AuthService.signup: Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+
       return {
         success: false,
         error: 'An error occurred during signup',
