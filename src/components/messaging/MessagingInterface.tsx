@@ -6,8 +6,8 @@ import MessageBubble, { Message, MessageAttachment } from './MessageBubble';
 import MessageInput from './MessageInput';
 import dynamic from 'next/dynamic';
 
-// Dynamically import CallModal with SSR disabled to prevent window errors
-const CallModal = dynamic(() => import('../CallModal'), {
+// Dynamically import VideoCallModal with SSR disabled to prevent window errors
+const VideoCallModal = dynamic(() => import('../VideoCallModal'), {
     ssr: false
 });
 import { useAuth } from '@/contexts/AuthContext';
@@ -475,15 +475,14 @@ export default function MessagingInterface({
                 </p>
             </div>
 
-            {/* Call Modal */}
+            {/* Video Call Modal */}
             {isVideoCallOpen && (
-                <CallModal
+                <VideoCallModal
                     isOpen={isVideoCallOpen}
                     onClose={() => setIsVideoCallOpen(false)}
-                    roomName={generateRoomName()}
+                    bookingId={bookingId}
                     displayName={user?.name || 'User'}
                     participantName={otherParticipant.name}
-                    callType={booking?.bookingType === 'PHONE_CALL' ? 'PHONE_CALL' : 'VIDEO_CALL'}
                 />
             )}
         </div>
