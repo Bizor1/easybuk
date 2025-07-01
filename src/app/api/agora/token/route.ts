@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
             console.log('❌ AGORA_TOKEN: Booking requested:', bookingId);
 
             // Collect debug information
-            const debugInfo = {
+            const debugInfo: any = {
                 timestamp: new Date().toISOString(),
                 user: {
                     userId: tokenPayload.userId,
