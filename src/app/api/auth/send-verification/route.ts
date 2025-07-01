@@ -9,10 +9,12 @@ export async function POST(request: NextRequest) {
   console.log('🔔 EMAIL_VERIFICATION: Starting email verification process');
 
   try {
+    console.log('📧 EMAIL_VERIFICATION: === NEW VERSION 2.0 STARTING ===');
+
     console.log('📥 EMAIL_VERIFICATION: Parsing request body');
 
     // Safely parse JSON body - handle empty/malformed requests
-    let body: any = {};
+    const body: any = {};
     let requestEmail = null;
 
     try {
@@ -194,7 +196,7 @@ export async function POST(request: NextRequest) {
 
       } catch (directEmailError) {
         console.error('❌ EMAIL_VERIFICATION: Direct email failed:', directEmailError);
-        throw new Error(`Direct email failed: ${directEmailError instanceof Error ? directEmailError.message : 'Unknown error'}`);
+        throw new Error(`[NEW_VERSION_2.0] Direct email failed: ${directEmailError instanceof Error ? directEmailError.message : 'Unknown error'}`);
       }
 
     } catch (emailError) {
@@ -217,7 +219,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: 'Failed to send verification email',
-          details: emailError instanceof Error ? emailError.message : 'Unknown error'
+          details: `[NEW_VERSION_2.0] ${emailError instanceof Error ? emailError.message : 'Unknown error'}`,
+          version: 'NEW_VERSION_2.0'
         },
         { status: 500 }
       );
@@ -232,7 +235,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: 'Failed to send verification email',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: `[NEW_VERSION_2.0] ${error instanceof Error ? error.message : 'Unknown error'}`,
+        version: 'NEW_VERSION_2.0'
       },
       { status: 500 }
     );
