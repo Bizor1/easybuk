@@ -28,7 +28,25 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        console.log('🔍 AGORA_TOKEN: Validating booking access for user:', tokenPayload.userId);
+        console.log('🔍 AGORA_TOKEN: Validating booking access for user:', tokenPayload.userId, 'bookingId:', bookingId);
+
+        // First, let's find the booking without user restrictions to see what's there
+        const bookingInfo = await prisma.booking.findUnique({
+            where: { id: bookingId },
+            include: {
+                Client: true,
+                ServiceProvider: true
+            }
+        });
+
+        console.log('📋 AGORA_TOKEN: Booking found:', bookingInfo ? {
+            id: bookingInfo.id,
+            status: bookingInfo.status,
+            clientId: bookingInfo.clientId,
+            providerId: bookingInfo.providerId,
+            clientName: bookingInfo.Client?.name,
+            providerName: bookingInfo.ServiceProvider?.name
+        } : 'NOT FOUND');
 
         // Validate that user is part of this booking
         const booking = await prisma.booking.findFirst({
@@ -49,7 +67,18 @@ export async function POST(request: NextRequest) {
         });
 
         if (!booking) {
-            console.log('❌ AGORA_TOKEN: Booking not found, user not authorized, or booking not in valid state (CONFIRMED/IN_PROGRESS)');
+            console.log('❌ AGORA_TOKEN: Access denied. User:', tokenPayload.userId,
+                'not authorized for booking:', bookingId,
+                'or booking not in valid state (CONFIRMED/IN_PROGRESS)');
+
+            // Additional debugging
+            if (bookingInfo) {
+                console.log('📋 AGORA_TOKEN: Booking exists but access denied. Checking criteria:');
+                console.log('  - User matches clientId?', bookingInfo.clientId === tokenPayload.userId);
+                console.log('  - User matches providerId?', bookingInfo.providerId === tokenPayload.userId);
+                console.log('  - Status valid?', ['CONFIRMED', 'IN_PROGRESS'].includes(bookingInfo.status));
+            }
+
             return NextResponse.json(
                 { error: 'Booking not found or access denied' },
                 { status: 403 }
