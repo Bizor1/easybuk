@@ -25,7 +25,6 @@ interface AgoraTokenResponse {
     token: string;
     channelName: string;
     uid: string;
-    appId: string;
     booking: {
         id: string;
         clientName: string;
@@ -41,13 +40,27 @@ function VideoCallContent({ bookingId, displayName, onCallEnd, onCallStart }: Vi
     const [micOn, setMic] = useState(true);
     const [cameraOn, setCamera] = useState(true);
 
+    // Get Agora App ID from environment variable
+    const agoraAppId = process.env.NEXT_PUBLIC_AGORA_APP_ID;
+
+    // Check if App ID is available
+    useEffect(() => {
+        console.log('🔧 AGORA: App ID from environment:', agoraAppId ? `${agoraAppId.substring(0, 8)}...` : 'MISSING');
+
+        if (!agoraAppId) {
+            setError('Agora App ID not configured. Please check environment variables.');
+            setIsLoading(false);
+            return;
+        }
+    }, [agoraAppId]);
+
     // Get local tracks
     const { localMicrophoneTrack } = useLocalMicrophoneTrack(micOn);
     const { localCameraTrack } = useLocalCameraTrack(cameraOn);
 
-    // Join channel
+    // Join channel - now using environment variable for App ID
     useJoin({
-        appid: tokenData?.appId || '',
+        appid: agoraAppId || '',
         channel: tokenData?.channelName || '',
         token: tokenData?.token || null,
         uid: tokenData?.uid || null,

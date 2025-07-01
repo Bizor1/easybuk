@@ -246,76 +246,41 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Generate token parameters
-        const uid = parseInt(tokenPayload.userId) || 0; // Use user ID as UID
-        const role = RtcRole.PUBLISHER; // All participants can publish
+        // Generate token
+        const uid = Math.floor(Math.random() * 1000000);
         const expirationTimeInSeconds = 3600; // 1 hour
-        const currentTimeStamp = Math.floor(Date.now() / 1000);
-        const privilegeExpiredTs = currentTimeStamp + expirationTimeInSeconds;
+        const currentTimestamp = Math.floor(Date.now() / 1000);
+        const privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds;
 
-        console.log('🎫 AGORA_TOKEN: Generating token with parameters:', {
-            channelName,
-            uid,
-            role: 'PUBLISHER',
-            expirationHours: 1,
-            appId: appId ? `${appId.substring(0, 8)}...` : 'MISSING'
-        });
-
-        console.log('👥 AGORA_TOKEN: Booking participants being added to call:', {
-            bookingId: booking.id,
-            clientName: booking.Client.name,
-            clientId: booking.clientId,
-            providerName: booking.ServiceProvider.name,
-            providerId: booking.providerId,
-            requestingUser: tokenPayload.userId,
-            requestingUserEmail: tokenPayload.email
-        });
-
-        // Generate the token
         const token = RtcTokenBuilder.buildTokenWithUid(
             appId,
             appCertificate,
             channelName,
             uid,
-            role,
+            RtcRole.PUBLISHER,
             privilegeExpiredTs
         );
 
-        console.log('✅ AGORA_TOKEN: Token generated successfully');
-        console.log('📦 AGORA_TOKEN: Response data:', {
-            tokenLength: token.length,
-            channelName,
-            uid: uid.toString(),
-            appId,
-            bookingId: booking.id,
-            expiresAt: new Date(privilegeExpiredTs * 1000).toISOString()
-        });
+        console.log('✅ AGORA_TOKEN: Token generated successfully for user:', tokenPayload.userId);
+        console.log('🎥 AGORA_TOKEN: Channel:', channelName, 'UID:', uid);
+        console.log('🎥 AGORA_TOKEN: ===============================================');
 
-        // Return token with participant info
         return NextResponse.json({
             token,
             channelName,
             uid: uid.toString(),
-            appId,
             booking: {
                 id: booking.id,
-                clientName: booking.Client.name,
-                providerName: booking.ServiceProvider.name
-            },
-            expiresAt: new Date(privilegeExpiredTs * 1000).toISOString()
+                clientName: booking.Client?.name || 'Unknown Client',
+                providerName: booking.ServiceProvider?.name || 'Unknown Provider'
+            }
         });
 
-    } catch (error) {
-        console.error('🚨 AGORA_TOKEN: ===============================================');
-        console.error('🚨 AGORA_TOKEN: ERROR GENERATING TOKEN');
-        console.error('🚨 AGORA_TOKEN: Error details:', {
-            message: error instanceof Error ? error.message : 'Unknown error',
-            stack: error instanceof Error ? error.stack : 'No stack trace',
-            timestamp: new Date().toISOString()
-        });
-        console.error('🚨 AGORA_TOKEN: Full error object:', error);
+    } catch (error: any) {
+        console.log('❌ AGORA_TOKEN: ERROR:', error.message);
+        console.log('🎥 AGORA_TOKEN: ===============================================');
         return NextResponse.json(
-            { error: 'Failed to generate token' },
+            { error: 'Failed to generate video call token' },
             { status: 500 }
         );
     }
