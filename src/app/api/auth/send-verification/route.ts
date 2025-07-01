@@ -9,7 +9,23 @@ export async function POST(request: NextRequest) {
   console.log('🔔 EMAIL_VERIFICATION: Starting email verification process');
 
   try {
-    console.log('📧 EMAIL_VERIFICATION: === NEW VERSION 2.0 STARTING ===');
+    console.log('📧 EMAIL_VERIFICATION: === NEW VERSION 2.1 STARTING ===');
+
+    // First, validate environment variables
+    const emailUser = process.env.EMAIL_SERVER_USER;
+    const emailPass = process.env.EMAIL_SERVER_PASSWORD;
+
+    if (!emailUser || !emailPass) {
+      console.error('❌ EMAIL_VERIFICATION: Missing email credentials');
+      return NextResponse.json(
+        {
+          error: 'Email service not configured',
+          details: 'Email server credentials are missing. Please contact support.',
+          version: 'NEW_VERSION_2.1'
+        },
+        { status: 500 }
+      );
+    }
 
     console.log('📥 EMAIL_VERIFICATION: Parsing request body');
 
@@ -22,8 +38,8 @@ export async function POST(request: NextRequest) {
       console.log('📄 EMAIL_VERIFICATION: Raw request body length:', rawBody.length);
 
       if (rawBody && rawBody.trim()) {
-        body = JSON.parse(rawBody);
-        requestEmail = body?.email || null;
+        const parsedBody = JSON.parse(rawBody);
+        requestEmail = parsedBody?.email || null;
         console.log('📧 EMAIL_VERIFICATION: Extracted email:', requestEmail);
       }
     } catch (jsonError) {
@@ -56,7 +72,14 @@ export async function POST(request: NextRequest) {
         console.log('✅ EMAIL_VERIFICATION: User found by token:', !!user);
       } catch (dbError) {
         console.error('❌ EMAIL_VERIFICATION: Database error finding user by token:', dbError);
-        throw dbError;
+        return NextResponse.json(
+          {
+            error: 'Database connection error',
+            details: 'Unable to access user database. Please try again.',
+            version: 'NEW_VERSION_2.1'
+          },
+          { status: 500 }
+        );
       }
     } else if (requestEmail) {
       // Unauthenticated request - get user from email (signup flow)
@@ -68,12 +91,19 @@ export async function POST(request: NextRequest) {
         console.log('✅ EMAIL_VERIFICATION: User found by email:', !!user);
       } catch (dbError) {
         console.error('❌ EMAIL_VERIFICATION: Database error finding user by email:', dbError);
-        throw dbError;
+        return NextResponse.json(
+          {
+            error: 'Database connection error',
+            details: 'Unable to access user database. Please try again.',
+            version: 'NEW_VERSION_2.1'
+          },
+          { status: 500 }
+        );
       }
     } else {
       console.log('❌ EMAIL_VERIFICATION: No authentication token and no email provided');
       return NextResponse.json(
-        { error: 'Email address is required' },
+        { error: 'Email address is required', version: 'NEW_VERSION_2.1' },
         { status: 400 }
       );
     }
@@ -83,7 +113,7 @@ export async function POST(request: NextRequest) {
     if (!user) {
       console.log('ERROR: User not found in database');
       return NextResponse.json(
-        { error: 'User not found' },
+        { error: 'User not found', version: 'NEW_VERSION_2.1' },
         { status: 404 }
       );
     }
@@ -108,7 +138,14 @@ export async function POST(request: NextRequest) {
       console.log('✅ Verification token stored successfully');
     } catch (dbError) {
       console.error('❌ Database error storing token:', dbError);
-      throw dbError;
+      return NextResponse.json(
+        {
+          error: 'Database error',
+          details: 'Unable to store verification token. Please try again.',
+          version: 'NEW_VERSION_2.1'
+        },
+        { status: 500 }
+      );
     }
 
     // Send verification email
@@ -116,7 +153,6 @@ export async function POST(request: NextRequest) {
     try {
       // Always use the main production URL for consistency
       const origin = 'https://easybuk.vercel.app';
-
       const verificationLink = `${origin}/auth/verify-email?token=${verificationToken}`;
 
       console.log('📧 EMAIL_VERIFICATION: Email details:');
@@ -124,26 +160,24 @@ export async function POST(request: NextRequest) {
       console.log('   - Origin:', origin);
       console.log('   - Verification link:', verificationLink);
 
-      // Use direct email approach to avoid internal fetch routing issues
+      // Use direct email approach with better error handling
       console.log('📧 EMAIL_VERIFICATION: Using direct email approach');
 
       try {
         const nodemailer = await import('nodemailer');
 
-        const emailUser = process.env.EMAIL_SERVER_USER;
-        const emailPass = process.env.EMAIL_SERVER_PASSWORD;
-
-        if (!emailUser || !emailPass) {
-          throw new Error('SMTP credentials not configured');
-        }
-
         console.log('📧 EMAIL_VERIFICATION: Creating transporter...');
-        const transporter = nodemailer.default.createTransporter({
+        const transporter = nodemailer.default.createTransport({
           host: 'smtp.gmail.com',
           port: 587,
           secure: false,
           auth: { user: emailUser, pass: emailPass },
         });
+
+        // Verify transporter connection
+        console.log('📧 EMAIL_VERIFICATION: Verifying SMTP connection...');
+        await transporter.verify();
+        console.log('✅ EMAIL_VERIFICATION: SMTP connection verified');
 
         const htmlContent = `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -191,12 +225,34 @@ export async function POST(request: NextRequest) {
           success: true,
           message: 'Verification email sent successfully! Please check your inbox.',
           verificationToken: verificationToken,
-          verificationLink: verificationLink
+          verificationLink: verificationLink,
+          version: 'NEW_VERSION_2.1'
         });
 
       } catch (directEmailError) {
         console.error('❌ EMAIL_VERIFICATION: Direct email failed:', directEmailError);
-        throw new Error(`[NEW_VERSION_2.0] Direct email failed: ${directEmailError instanceof Error ? directEmailError.message : 'Unknown error'}`);
+
+        // Clean up the token on email failure
+        try {
+          await prisma.verificationToken.deleteMany({
+            where: {
+              token: verificationToken,
+              used: false
+            }
+          });
+          console.log('🗑️ Cleaned up verification token after email failure');
+        } catch (cleanupError) {
+          console.error('Failed to cleanup token:', cleanupError);
+        }
+
+        return NextResponse.json(
+          {
+            error: 'Failed to send verification email',
+            details: `Email sending failed: ${directEmailError instanceof Error ? directEmailError.message : 'Unknown error'}`,
+            version: 'NEW_VERSION_2.1'
+          },
+          { status: 500 }
+        );
       }
 
     } catch (emailError) {
@@ -219,8 +275,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: 'Failed to send verification email',
-          details: `[NEW_VERSION_2.0] ${emailError instanceof Error ? emailError.message : 'Unknown error'}`,
-          version: 'NEW_VERSION_2.0'
+          details: `Email service error: ${emailError instanceof Error ? emailError.message : 'Unknown error'}`,
+          version: 'NEW_VERSION_2.1'
         },
         { status: 500 }
       );
@@ -234,9 +290,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       {
-        error: 'Failed to send verification email',
-        details: `[NEW_VERSION_2.0] ${error instanceof Error ? error.message : 'Unknown error'}`,
-        version: 'NEW_VERSION_2.0'
+        error: 'Internal server error',
+        details: `Server error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        version: 'NEW_VERSION_2.1'
       },
       { status: 500 }
     );

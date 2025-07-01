@@ -1,29 +1,29 @@
 import nodemailer from 'nodemailer';
 
 export async function sendVerificationEmail(to: string, userName: string, verificationLink: string) {
-    try {
-        console.log('📧 DIRECT_EMAIL: Sending verification email to:', to);
+  try {
+    console.log('📧 DIRECT_EMAIL: Sending verification email to:', to);
 
-        // Check if email credentials are configured
-        const emailUser = process.env.EMAIL_SERVER_USER;
-        const emailPass = process.env.EMAIL_SERVER_PASSWORD;
+    // Check if email credentials are configured
+    const emailUser = process.env.EMAIL_SERVER_USER;
+    const emailPass = process.env.EMAIL_SERVER_PASSWORD;
 
-        if (!emailUser || !emailPass) {
-            throw new Error('SMTP credentials not configured');
-        }
+    if (!emailUser || !emailPass) {
+      throw new Error('SMTP credentials not configured');
+    }
 
-        // Create transporter
-        const transporter = nodemailer.createTransporter({
-            host: 'smtp.gmail.com',
-            port: 587,
-            secure: false,
-            auth: {
-                user: emailUser,
-                pass: emailPass,
-            },
-        });
+    // Create transporter
+    const transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false,
+      auth: {
+        user: emailUser,
+        pass: emailPass,
+      },
+    });
 
-        const htmlContent = `
+    const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
           <h1 style="color: white; margin: 0;">EasyBuk</h1>
@@ -61,24 +61,24 @@ export async function sendVerificationEmail(to: string, userName: string, verifi
       </div>
     `;
 
-        const mailOptions = {
-            from: `"EasyBuk" <${emailUser}>`,
-            to: to,
-            subject: '✉️ Verify Your EasyBuk Account Email',
-            html: htmlContent
-        };
+    const mailOptions = {
+      from: `"EasyBuk" <${emailUser}>`,
+      to: to,
+      subject: '✉️ Verify Your EasyBuk Account Email',
+      html: htmlContent
+    };
 
-        console.log('📧 DIRECT_EMAIL: Sending email via SMTP...');
-        const result = await transporter.sendMail(mailOptions);
-        console.log('✅ DIRECT_EMAIL: Email sent successfully:', result.messageId);
+    console.log('📧 DIRECT_EMAIL: Sending email via SMTP...');
+    const result = await transporter.sendMail(mailOptions);
+    console.log('✅ DIRECT_EMAIL: Email sent successfully:', result.messageId);
 
-        return {
-            success: true,
-            messageId: result.messageId
-        };
+    return {
+      success: true,
+      messageId: result.messageId
+    };
 
-    } catch (error) {
-        console.error('❌ DIRECT_EMAIL: Error sending email:', error);
-        throw error;
-    }
+  } catch (error) {
+    console.error('❌ DIRECT_EMAIL: Error sending email:', error);
+    throw error;
+  }
 } 

@@ -2,9 +2,9 @@ import nodemailer from 'nodemailer';
 
 // Email templates
 const emailTemplates = {
-    email_verification: {
-        subject: '✉️ Verify Your EasyBuk Account Email',
-        html: (data: any) => `
+  email_verification: {
+    subject: '✉️ Verify Your EasyBuk Account Email',
+    html: (data: any) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
           <h1 style="color: white; margin: 0;">EasyBuk</h1>
@@ -41,74 +41,74 @@ const emailTemplates = {
         </div>
       </div>
     `
-    }
+  }
 };
 
 // Create email transporter
 const createTransporter = () => {
-    return nodemailer.createTransporter({
-        host: process.env.EMAIL_SERVER_HOST || process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: parseInt(process.env.EMAIL_SERVER_PORT || process.env.SMTP_PORT || '587'),
-        secure: false,
-        auth: {
-            user: process.env.EMAIL_SERVER_USER || process.env.SMTP_USER,
-            pass: process.env.EMAIL_SERVER_PASSWORD || process.env.SMTP_PASS,
-        },
-    });
+  return nodemailer.createTransport({
+    host: process.env.EMAIL_SERVER_HOST || process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.EMAIL_SERVER_PORT || process.env.SMTP_PORT || '587'),
+    secure: false,
+    auth: {
+      user: process.env.EMAIL_SERVER_USER || process.env.SMTP_USER,
+      pass: process.env.EMAIL_SERVER_PASSWORD || process.env.SMTP_PASS,
+    },
+  });
 };
 
 export interface EmailData {
-    to: string;
-    type: keyof typeof emailTemplates;
-    data: any;
+  to: string;
+  type: keyof typeof emailTemplates;
+  data: any;
 }
 
 export async function sendEmail({ to, type, data = {} }: EmailData) {
-    try {
-        console.log('📧 SHARED_EMAIL_SERVICE: Sending email:', { to, type, hasData: !!data });
+  try {
+    console.log('📧 SHARED_EMAIL_SERVICE: Sending email:', { to, type, hasData: !!data });
 
-        // Check if email template exists
-        const template = emailTemplates[type];
-        if (!template) {
-            throw new Error(`Unknown email template: ${type}`);
-        }
-
-        // Check if email credentials are configured
-        const emailUser = process.env.EMAIL_SERVER_USER || process.env.SMTP_USER;
-        const emailPass = process.env.EMAIL_SERVER_PASSWORD || process.env.SMTP_PASS;
-
-        if (!emailUser || !emailPass) {
-            console.log('❌ SMTP credentials not configured');
-            throw new Error('SMTP credentials not configured');
-        }
-
-        // Create transporter and send email
-        const transporter = createTransporter();
-
-        const mailOptions = {
-            from: `"EasyBuk" <${emailUser}>`,
-            to: to,
-            subject: template.subject,
-            html: template.html(data)
-        };
-
-        console.log('📧 SHARED_EMAIL_SERVICE: Sending email via SMTP...');
-        const result = await transporter.sendMail(mailOptions);
-        console.log('✅ SHARED_EMAIL_SERVICE: Email sent successfully:', result.messageId);
-
-        return {
-            success: true,
-            message: 'Email sent successfully',
-            messageId: result.messageId,
-            email: {
-                to,
-                subject: template.subject,
-                type
-            }
-        };
-
-    } catch (error) {
-        console.error('❌ SHARED_EMAIL_SERVICE: Error sending email:', error);
-        throw error;
+    // Check if email template exists
+    const template = emailTemplates[type];
+    if (!template) {
+      throw new Error(`Unknown email template: ${type}`);
     }
+
+    // Check if email credentials are configured
+    const emailUser = process.env.EMAIL_SERVER_USER || process.env.SMTP_USER;
+    const emailPass = process.env.EMAIL_SERVER_PASSWORD || process.env.SMTP_PASS;
+
+    if (!emailUser || !emailPass) {
+      console.log('❌ SMTP credentials not configured');
+      throw new Error('SMTP credentials not configured');
+    }
+
+    // Create transporter and send email
+    const transporter = createTransporter();
+
+    const mailOptions = {
+      from: `"EasyBuk" <${emailUser}>`,
+      to: to,
+      subject: template.subject,
+      html: template.html(data)
+    };
+
+    console.log('📧 SHARED_EMAIL_SERVICE: Sending email via SMTP...');
+    const result = await transporter.sendMail(mailOptions);
+    console.log('✅ SHARED_EMAIL_SERVICE: Email sent successfully:', result.messageId);
+
+    return {
+      success: true,
+      message: 'Email sent successfully',
+      messageId: result.messageId,
+      email: {
+        to,
+        subject: template.subject,
+        type
+      }
+    };
+
+  } catch (error) {
+    console.error('❌ SHARED_EMAIL_SERVICE: Error sending email:', error);
+    throw error;
+  }
 } 
