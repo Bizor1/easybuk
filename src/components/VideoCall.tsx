@@ -1,16 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { loadJitsiScript, getJitsiConfig, createRoomName } from '@/lib/jitsi-config';
 
 interface VideoCallProps {
     roomName: string;
     displayName: string;
     onCallEnd?: () => void;
     onCallStart?: () => void;
-}
-
-declare global {
-    interface Window {
-        JitsiMeetExternalAPI: any;
-    }
 }
 
 export default function VideoCall({ roomName, displayName, onCallEnd, onCallStart }: VideoCallProps) {
@@ -21,23 +16,6 @@ export default function VideoCall({ roomName, displayName, onCallEnd, onCallStar
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        // Load Jitsi Meet API script
-        const loadJitsiScript = () => {
-            return new Promise((resolve, reject) => {
-                if (window.JitsiMeetExternalAPI) {
-                    resolve(window.JitsiMeetExternalAPI);
-                    return;
-                }
-
-                const script = document.createElement('script');
-                script.src = 'https://meet.jit.si/external_api.js';
-                script.async = true;
-                script.onload = () => resolve(window.JitsiMeetExternalAPI);
-                script.onerror = () => reject(new Error('Failed to load Jitsi Meet API'));
-                document.head.appendChild(script);
-            });
-        };
-
         const initializeJitsi = async () => {
             try {
                 setIsLoading(true);
@@ -45,44 +23,20 @@ export default function VideoCall({ roomName, displayName, onCallEnd, onCallStar
 
                 if (!jitsiContainerRef.current) return;
 
-                const domain = 'meet.jit.si';
+                const config = getJitsiConfig('video');
                 const options = {
-                    roomName: `easybuk-${roomName}`,
+                    roomName: createRoomName('video', roomName),
                     width: '100%',
                     height: '100%',
                     parentNode: jitsiContainerRef.current,
-                    configOverwrite: {
-                        startWithAudioMuted: false,
-                        startWithVideoMuted: false,
-                        enableWelcomePage: false,
-                        prejoinPageEnabled: false,
-                        disableModeratorIndicator: true,
-                        startScreenSharing: false,
-                        enableEmailInStats: false,
-                    },
-                    interfaceConfigOverwrite: {
-                        TOOLBAR_BUTTONS: [
-                            'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
-                            'fodeviceselection', 'hangup', 'profile', 'chat', 'recording',
-                            'livestreaming', 'etherpad', 'sharedvideo', 'settings', 'raisehand',
-                            'videoquality', 'filmstrip', 'invite', 'feedback', 'stats', 'shortcuts',
-                            'tileview', 'videobackgroundblur', 'download', 'help', 'mute-everyone'
-                        ],
-                        SETTINGS_SECTIONS: ['devices', 'language', 'moderator', 'profile', 'calendar'],
-                        SHOW_JITSI_WATERMARK: false,
-                        SHOW_WATERMARK_FOR_GUESTS: false,
-                        SHOW_BRAND_WATERMARK: false,
-                        BRAND_WATERMARK_LINK: '',
-                        SHOW_POWERED_BY: false,
-                        SHOW_PROMOTIONAL_CLOSE_PAGE: false,
-                        SHOW_CHROME_EXTENSION_BANNER: false,
-                    },
+                    configOverwrite: config.configOverwrite,
+                    interfaceConfigOverwrite: config.interfaceConfigOverwrite,
                     userInfo: {
                         displayName: displayName,
                     }
                 };
 
-                const jitsiApi = new window.JitsiMeetExternalAPI(domain, options);
+                const jitsiApi = new window.JitsiMeetExternalAPI(config.domain, options);
 
                 // Event listeners
                 jitsiApi.addEventListener('videoConferenceJoined', () => {

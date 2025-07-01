@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { loadJitsiScript, getJitsiConfig, createRoomName } from '@/lib/jitsi-config';
 
 interface CallInterfaceProps {
     roomName: string;
@@ -6,12 +7,6 @@ interface CallInterfaceProps {
     callType: 'VIDEO_CALL' | 'PHONE_CALL';
     onCallEnd?: () => void;
     onCallStart?: () => void;
-}
-
-declare global {
-    interface Window {
-        JitsiMeetExternalAPI: any;
-    }
 }
 
 export default function CallInterface({
@@ -31,23 +26,6 @@ export default function CallInterface({
     const isAudioCall = callType === 'PHONE_CALL';
 
     useEffect(() => {
-        // Load Jitsi Meet API script
-        const loadJitsiScript = () => {
-            return new Promise((resolve, reject) => {
-                if (window.JitsiMeetExternalAPI) {
-                    resolve(window.JitsiMeetExternalAPI);
-                    return;
-                }
-
-                const script = document.createElement('script');
-                script.src = 'https://meet.jit.si/external_api.js';
-                script.async = true;
-                script.onload = () => resolve(window.JitsiMeetExternalAPI);
-                script.onerror = () => reject(new Error('Failed to load Jitsi Meet API'));
-                document.head.appendChild(script);
-            });
-        };
-
         const initializeJitsi = async () => {
             try {
                 setIsLoading(true);
@@ -55,63 +33,20 @@ export default function CallInterface({
 
                 if (!jitsiContainerRef.current) return;
 
-                const domain = 'meet.jit.si';
+                const config = getJitsiConfig(isVideoCall ? 'video' : 'audio');
                 const options = {
-                    roomName: `easybuk-${callType.toLowerCase()}-${roomName}`,
+                    roomName: createRoomName(callType.toLowerCase(), roomName),
                     width: '100%',
                     height: '100%',
                     parentNode: jitsiContainerRef.current,
-                    configOverwrite: {
-                        startWithAudioMuted: false,
-                        startWithVideoMuted: isAudioCall, // Start with video muted for audio calls
-                        enableWelcomePage: false,
-                        prejoinPageEnabled: false,
-                        disableModeratorIndicator: true,
-                        startScreenSharing: false,
-                        enableEmailInStats: false,
-                        // For audio calls, disable video entirely
-                        ...(isAudioCall && {
-                            disableAV: false,
-                            startAudioOnly: true,
-                            disableVideoQualityLabel: true,
-                            disableFilmstripAutohiding: true,
-                        }),
-                    },
-                    interfaceConfigOverwrite: {
-                        TOOLBAR_BUTTONS: isAudioCall ? [
-                            // Audio-only toolbar - remove video-related buttons
-                            'microphone', 'hangup', 'chat', 'raisehand',
-                            'settings', 'invite', 'feedback', 'shortcuts'
-                        ] : [
-                            // Full video toolbar
-                            'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
-                            'fodeviceselection', 'hangup', 'profile', 'chat', 'recording',
-                            'livestreaming', 'etherpad', 'sharedvideo', 'settings', 'raisehand',
-                            'videoquality', 'filmstrip', 'invite', 'feedback', 'stats', 'shortcuts',
-                            'tileview', 'videobackgroundblur', 'download', 'help', 'mute-everyone'
-                        ],
-                        SETTINGS_SECTIONS: isAudioCall ?
-                            ['devices', 'language', 'profile'] :
-                            ['devices', 'language', 'moderator', 'profile', 'calendar'],
-                        SHOW_JITSI_WATERMARK: false,
-                        SHOW_WATERMARK_FOR_GUESTS: false,
-                        SHOW_BRAND_WATERMARK: false,
-                        BRAND_WATERMARK_LINK: '',
-                        SHOW_POWERED_BY: false,
-                        SHOW_PROMOTIONAL_CLOSE_PAGE: false,
-                        SHOW_CHROME_EXTENSION_BANNER: false,
-                        // For audio calls, hide video-related UI elements
-                        ...(isAudioCall && {
-                            filmStripOnly: false,
-                            VERTICAL_FILMSTRIP: false,
-                        }),
-                    },
+                    configOverwrite: config.configOverwrite,
+                    interfaceConfigOverwrite: config.interfaceConfigOverwrite,
                     userInfo: {
                         displayName: displayName,
                     }
                 };
 
-                const jitsiApi = new window.JitsiMeetExternalAPI(domain, options);
+                const jitsiApi = new window.JitsiMeetExternalAPI(config.domain, options);
 
                 // Event listeners
                 jitsiApi.addEventListener('videoConferenceJoined', () => {
