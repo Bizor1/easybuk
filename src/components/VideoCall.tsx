@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
+import AgoraRTC from 'agora-rtc-sdk-ng';
 import {
     AgoraRTCProvider,
     LocalUser,
@@ -11,7 +12,6 @@ import {
     usePublish,
     useRemoteAudioTracks,
     useRemoteUsers,
-    useRTCClient,
 } from 'agora-rtc-react';
 
 interface VideoCallProps {
@@ -233,10 +233,13 @@ function VideoCallContent({ bookingId, displayName, onCallEnd, onCallStart }: Vi
 }
 
 export default function VideoCall(props: VideoCallProps) {
-    const agoraClient = useRTCClient();
+    // Create Agora RTC client with useMemo to prevent recreation on every render
+    const agoraClient = useMemo(() => {
+        return AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+    }, []);
 
     return (
-        <AgoraRTCProvider client={agoraClient}>
+        <AgoraRTCProvider client={agoraClient as any}>
             <VideoCallContent {...props} />
         </AgoraRTCProvider>
     );
