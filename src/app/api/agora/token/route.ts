@@ -234,14 +234,20 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Check environment variables
+        // Get credentials from environment variables
         const appId = process.env.AGORA_KEY;
         const appCertificate = process.env.AGORA_SECRET;
 
+        console.log('🔑 AGORA_TOKEN: Using environment credentials:', {
+            appId: appId ? `${appId.substring(0, 8)}...` : 'MISSING',
+            appCertificate: appCertificate ? '***hidden***' : 'MISSING'
+        });
+
         if (!appId || !appCertificate) {
-            console.error('❌ AGORA_TOKEN: Missing Agora credentials');
+            console.error('❌ AGORA_TOKEN: Missing Agora environment variables');
+            console.error('   Required: AGORA_KEY and AGORA_SECRET');
             return NextResponse.json(
-                { error: 'Agora service not configured' },
+                { error: 'Agora service not configured - missing environment variables' },
                 { status: 500 }
             );
         }
@@ -269,6 +275,7 @@ export async function POST(request: NextRequest) {
             token,
             channelName,
             uid: uid.toString(),
+            appId: appId,
             booking: {
                 id: booking.id,
                 clientName: booking.Client?.name || 'Unknown Client',

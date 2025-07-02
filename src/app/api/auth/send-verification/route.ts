@@ -151,8 +151,8 @@ export async function POST(request: NextRequest) {
     // Send verification email
     console.log('📧 EMAIL_VERIFICATION: Starting email sending process');
     try {
-      // Always use the main production URL for consistency
-      const origin = 'https://easybuk.vercel.app';
+      // Temporarily using localhost for testing
+      const origin = 'http://localhost:3000';
       const verificationLink = `${origin}/auth/verify-email?token=${verificationToken}`;
 
       console.log('📧 EMAIL_VERIFICATION: Email details:');

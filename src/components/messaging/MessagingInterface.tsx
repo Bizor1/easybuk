@@ -481,7 +481,6 @@ export default function MessagingInterface({
                     isOpen={isVideoCallOpen}
                     onClose={() => setIsVideoCallOpen(false)}
                     bookingId={bookingId}
-                    displayName={user?.name || 'User'}
                     participantName={otherParticipant.name}
                 />
             )}

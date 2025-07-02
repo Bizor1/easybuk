@@ -1,24 +1,18 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
-import AgoraRTC from 'agora-rtc-sdk-ng';
-import {
-    AgoraRTCProvider,
-    LocalUser,
-    RemoteUser,
-    useJoin,
-    useLocalCameraTrack,
-    useLocalMicrophoneTrack,
-    usePublish,
-    useRemoteAudioTracks,
-    useRemoteUsers,
-} from 'agora-rtc-react';
+import React, { useEffect, useRef, useState } from 'react';
+import AgoraRTC, {
+    IAgoraRTCClient,
+    IAgoraRTCRemoteUser,
+    ICameraVideoTrack,
+    IMicrophoneAudioTrack
+} from 'agora-rtc-sdk-ng';
 
 interface VideoCallProps {
     bookingId: string;
     displayName: string;
-    onCallEnd?: () => void;
-    onCallStart?: () => void;
+    onCallEnd: () => void;
+    onCallStart: () => void;
 }
 
 interface AgoraTokenResponse {
@@ -32,7 +26,7 @@ interface AgoraTokenResponse {
     };
 }
 
-function VideoCallContent({ bookingId, displayName, onCallEnd, onCallStart }: VideoCallProps) {
+export default function VideoCall({ bookingId, displayName, onCallEnd, onCallStart }: VideoCallProps) {
     const [tokenData, setTokenData] = useState<AgoraTokenResponse | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -40,78 +34,26 @@ function VideoCallContent({ bookingId, displayName, onCallEnd, onCallStart }: Vi
     const [micOn, setMic] = useState(true);
     const [cameraOn, setCamera] = useState(true);
 
-    // Get Agora App ID from environment variable
-    const agoraAppId = process.env.NEXT_PUBLIC_AGORA_APP_ID;
+    // Agora Web SDK refs
+    const clientRef = useRef<IAgoraRTCClient | null>(null);
+    const localVideoTrackRef = useRef<ICameraVideoTrack | null>(null);
+    const localAudioTrackRef = useRef<IMicrophoneAudioTrack | null>(null);
+    const localVideoContainerRef = useRef<HTMLDivElement>(null);
 
-    // Check if App ID is available
-    useEffect(() => {
-        console.log('🔧 AGORA: App ID from environment:', agoraAppId ? `${agoraAppId.substring(0, 8)}...` : 'MISSING');
-
-        if (!agoraAppId) {
-            setError('Agora App ID not configured. Please check environment variables.');
-            setIsLoading(false);
-            return;
-        }
-    }, [agoraAppId]);
-
-    // Get local tracks
-    const { localMicrophoneTrack } = useLocalMicrophoneTrack(micOn);
-    const { localCameraTrack } = useLocalCameraTrack(cameraOn);
-
-    // Join channel - now using environment variable for App ID
-    useJoin({
-        appid: agoraAppId || '',
-        channel: tokenData?.channelName || '',
-        token: tokenData?.token || null,
-        uid: tokenData?.uid || null,
-    }, calling);
-
-    // Publish local tracks
-    usePublish([localMicrophoneTrack, localCameraTrack]);
-
-    // Get remote users and their audio tracks
-    const remoteUsers = useRemoteUsers();
-    const { audioTracks } = useRemoteAudioTracks(remoteUsers);
-
-    // Play remote audio tracks
-    useEffect(() => {
-        audioTracks.forEach((track: any) => track.play());
-    }, [audioTracks]);
-
-    // Fetch Agora token
+    // Fetch token from your API
     useEffect(() => {
         const fetchToken = async () => {
             try {
-                setIsLoading(true);
-
-                const channelName = `easybuk-consultation-${bookingId}`;
-
-                const response = await fetch('/api/agora/token', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        bookingId,
-                        channelName,
-                    }),
-                });
-
+                const response = await fetch(`/api/agora/token?bookingId=${bookingId}`);
                 if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Failed to get video call token');
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
-
-                const data: AgoraTokenResponse = await response.json();
+                const data = await response.json();
                 setTokenData(data);
-                setError(null);
-
-                console.log('✅ AGORA: Token received, joining channel:', data.channelName);
-
+                setIsLoading(false);
             } catch (err) {
-                console.error('❌ AGORA: Failed to fetch token:', err);
-                setError(err instanceof Error ? err.message : 'Failed to connect to video call');
-            } finally {
+                console.error('Failed to fetch token:', err);
+                setError('Failed to get video call token');
                 setIsLoading(false);
             }
         };
@@ -119,141 +61,328 @@ function VideoCallContent({ bookingId, displayName, onCallEnd, onCallStart }: Vi
         fetchToken();
     }, [bookingId]);
 
-    // Start call when token is ready
+    // Initialize Agora Web SDK
     useEffect(() => {
-        if (tokenData && !calling) {
-            setCalling(true);
-            onCallStart?.();
+        if (!tokenData) return;
+
+        const initializeAgora = async () => {
+            try {
+                console.log('🚀 AGORA WEB: Initializing Web SDK...');
+                console.log('📊 AGORA DEBUG: SDK Version:', AgoraRTC.VERSION);
+                console.log('📊 AGORA DEBUG: Browser support check:', AgoraRTC.checkSystemRequirements());
+
+                // Create Agora client for Web with enhanced config
+                const client = AgoraRTC.createClient({
+                    mode: "rtc",
+                    codec: "vp8",
+                    role: "host" // Latest SDK best practice
+                });
+
+                clientRef.current = client;
+                console.log('✅ AGORA DEBUG: Client created successfully');
+
+                // Enhanced event listeners with debugging
+                client.on("user-published", async (user, mediaType) => {
+                    console.log('👤 AGORA WEB: User published:', {
+                        uid: user.uid,
+                        mediaType,
+                        hasVideoTrack: !!user.videoTrack,
+                        hasAudioTrack: !!user.audioTrack
+                    });
+
+                    try {
+                        await client.subscribe(user, mediaType);
+                        console.log('✅ AGORA DEBUG: Successfully subscribed to user:', user.uid, mediaType);
+
+                        if (mediaType === "video") {
+                            const remoteVideoTrack = user.videoTrack;
+                            const remoteContainer = document.getElementById('remote-video-container');
+                            console.log('📺 AGORA DEBUG: Remote video container found:', !!remoteContainer);
+                            if (remoteContainer && remoteVideoTrack) {
+                                remoteVideoTrack.play(remoteContainer);
+                                console.log('✅ AGORA DEBUG: Remote video playing');
+                            }
+                        }
+
+                        if (mediaType === "audio") {
+                            const remoteAudioTrack = user.audioTrack;
+                            if (remoteAudioTrack) {
+                                remoteAudioTrack.play();
+                                console.log('✅ AGORA DEBUG: Remote audio playing');
+                            }
+                        }
+                    } catch (subError) {
+                        console.error('❌ AGORA DEBUG: Subscription failed:', subError);
+                    }
+                });
+
+                client.on("user-unpublished", (user, mediaType) => {
+                    console.log('👤 AGORA WEB: User unpublished:', {
+                        uid: user.uid,
+                        mediaType,
+                        timestamp: new Date().toISOString()
+                    });
+                });
+
+                client.on("user-left", (user) => {
+                    console.log('👤 AGORA WEB: User left:', {
+                        uid: user.uid,
+                        timestamp: new Date().toISOString()
+                    });
+                });
+
+                // Connection state monitoring (latest SDK feature)
+                client.on("connection-state-change", (curState, revState) => {
+                    console.log('🔗 AGORA DEBUG: Connection state changed:', {
+                        from: revState,
+                        to: curState,
+                        timestamp: new Date().toISOString()
+                    });
+                });
+
+                // Network quality monitoring (latest SDK feature)
+                client.on("network-quality", (stats) => {
+                    console.log('📊 AGORA DEBUG: Network quality:', {
+                        uplink: stats.uplinkNetworkQuality,
+                        downlink: stats.downlinkNetworkQuality,
+                        timestamp: new Date().toISOString()
+                    });
+                });
+
+                // Create local tracks with enhanced config
+                console.log('🎥 AGORA WEB: Creating local tracks...');
+                const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks(
+                    {
+                        // Enhanced audio config (latest SDK)
+                        AEC: true,
+                        ANS: true,
+                        AGC: true
+                    },
+                    {
+                        // Enhanced video config (latest SDK)
+                        encoderConfig: {
+                            width: 1280,
+                            height: 720,
+                            frameRate: 30,
+                            bitrateMax: 1500,
+                            bitrateMin: 400
+                        },
+                        optimizationMode: "detail"
+                    }
+                );
+
+                localVideoTrackRef.current = videoTrack;
+                localAudioTrackRef.current = audioTrack;
+
+                console.log('✅ AGORA DEBUG: Local tracks created:', {
+                    videoTrack: !!videoTrack,
+                    audioTrack: !!audioTrack,
+                    videoTrackId: videoTrack.getTrackId(),
+                    audioTrackId: audioTrack.getTrackId()
+                });
+
+                // Play local video
+                if (localVideoContainerRef.current) {
+                    videoTrack.play(localVideoContainerRef.current);
+                    console.log('✅ AGORA DEBUG: Local video playing in container');
+                } else {
+                    console.warn('⚠️ AGORA DEBUG: Local video container not found');
+                }
+
+                // Join channel with detailed logging
+                const appId = process.env.NEXT_PUBLIC_AGORA_APP_ID;
+                console.log('🔗 AGORA WEB: Joining channel with params:', {
+                    appId: appId ? `${appId.substring(0, 8)}...` : 'MISSING',
+                    channelName: tokenData.channelName,
+                    hasToken: !!tokenData.token,
+                    tokenPrefix: tokenData.token.substring(0, 10),
+                    uid: tokenData.uid
+                });
+
+                if (!appId) {
+                    throw new Error('NEXT_PUBLIC_AGORA_APP_ID is not configured. Add it to your .env.local file.');
+                }
+
+                const joinedUid = await client.join(
+                    appId,
+                    tokenData.channelName,
+                    tokenData.token,
+                    parseInt(tokenData.uid)
+                );
+
+                console.log('✅ AGORA WEB: Successfully joined channel:', {
+                    requestedUid: tokenData.uid,
+                    joinedUid: joinedUid,
+                    channelName: tokenData.channelName
+                });
+
+                // Publish local tracks
+                console.log('📡 AGORA DEBUG: Publishing local tracks...');
+                await client.publish([videoTrack, audioTrack]);
+                console.log('✅ AGORA WEB: Successfully published local tracks');
+
+                setCalling(true);
+                onCallStart();
+
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                const errorStack = error instanceof Error ? error.stack : undefined;
+
+                console.error('❌ AGORA WEB: Initialization failed:', {
+                    error: errorMessage,
+                    stack: errorStack,
+                    timestamp: new Date().toISOString(),
+                    tokenData: tokenData ? {
+                        channelName: tokenData.channelName,
+                        uid: tokenData.uid,
+                        hasToken: !!tokenData.token
+                    } : 'null'
+                });
+                setError(`Failed to initialize video call: ${errorMessage}`);
+            }
+        };
+
+        initializeAgora();
+
+        // Cleanup function
+        return () => {
+            cleanup();
+        };
+    }, [tokenData, onCallStart]);
+
+    const cleanup = async () => {
+        try {
+            console.log('🧹 AGORA DEBUG: Starting cleanup...');
+
+            if (localVideoTrackRef.current) {
+                console.log('🎥 AGORA DEBUG: Stopping local video track');
+                localVideoTrackRef.current.stop();
+                localVideoTrackRef.current.close();
+                localVideoTrackRef.current = null;
+                console.log('✅ AGORA DEBUG: Local video track cleaned up');
+            }
+
+            if (localAudioTrackRef.current) {
+                console.log('🎤 AGORA DEBUG: Stopping local audio track');
+                localAudioTrackRef.current.stop();
+                localAudioTrackRef.current.close();
+                localAudioTrackRef.current = null;
+                console.log('✅ AGORA DEBUG: Local audio track cleaned up');
+            }
+
+            if (clientRef.current) {
+                console.log('🔗 AGORA DEBUG: Leaving channel and cleaning client');
+                await clientRef.current.leave();
+                clientRef.current.removeAllListeners();
+                clientRef.current = null;
+                console.log('✅ AGORA DEBUG: Client cleaned up');
+            }
+
+            console.log('✅ AGORA DEBUG: Cleanup completed successfully');
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown cleanup error';
+            console.error('❌ AGORA DEBUG: Cleanup error:', {
+                error: errorMessage,
+                timestamp: new Date().toISOString()
+            });
         }
-    }, [tokenData, calling, onCallStart]);
+    };
+
+    const toggleMic = async () => {
+        if (localAudioTrackRef.current) {
+            await localAudioTrackRef.current.setEnabled(!micOn);
+            setMic(!micOn);
+        }
+    };
+
+    const toggleCamera = async () => {
+        if (localVideoTrackRef.current) {
+            await localVideoTrackRef.current.setEnabled(!cameraOn);
+            setCamera(!cameraOn);
+        }
+    };
 
     const endCall = () => {
+        cleanup();
         setCalling(false);
-        onCallEnd?.();
+        onCallEnd();
     };
 
     if (isLoading) {
         return (
-            <div className="flex flex-col items-center justify-center h-96 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-                <p className="text-gray-600 dark:text-gray-300 text-center">Connecting to video call...</p>
+            <div className="flex items-center justify-center h-64">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p>Connecting to video call...</p>
+                </div>
             </div>
         );
     }
 
     if (error) {
         return (
-            <div className="flex flex-col items-center justify-center h-96 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                <div className="text-red-500 mb-4">
-                    <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+            <div className="flex items-center justify-center h-64">
+                <div className="text-center text-red-600">
+                    <p className="mb-4">{error}</p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                    >
+                        Retry
+                    </button>
                 </div>
-                <p className="text-gray-600 dark:text-gray-300 text-center mb-4">{error}</p>
-                <button
-                    onClick={() => window.location.reload()}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                >
-                    Try Again
-                </button>
             </div>
         );
     }
 
     return (
-        <div className="relative w-full h-full min-h-[500px] bg-black rounded-lg overflow-hidden">
-            {/* Remote users grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 p-2 h-full">
-                {remoteUsers.map((user: any) => (
-                    <div key={user.uid} className="relative bg-gray-800 rounded-lg overflow-hidden">
-                        <RemoteUser user={user} />
-                        <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm">
-                            Remote User
-                        </div>
-                    </div>
-                ))}
-
-                {/* Local user */}
-                <div className="relative bg-gray-800 rounded-lg overflow-hidden">
-                    <LocalUser
-                        audioTrack={localMicrophoneTrack}
-                        videoTrack={localCameraTrack}
-                        cameraOn={cameraOn}
-                        micOn={micOn}
-                        playAudio={false} // Don't play own audio
-                        playVideo={cameraOn}
-                    />
-                    <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm">
-                        You ({displayName})
-                    </div>
+        <div className="w-full h-full bg-gray-900 rounded-lg overflow-hidden relative">
+            {/* Remote video (main view) */}
+            <div
+                id="remote-video-container"
+                className="w-full h-full bg-gray-800"
+            >
+                <div className="flex items-center justify-center h-full text-white">
+                    Waiting for other participant...
                 </div>
             </div>
 
+            {/* Local video (picture-in-picture) */}
+            <div className="absolute top-4 right-4 w-32 h-24 bg-gray-700 rounded-lg overflow-hidden">
+                <div
+                    ref={localVideoContainerRef}
+                    className="w-full h-full"
+                />
+            </div>
+
             {/* Controls */}
-            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-4 bg-gray-900 bg-opacity-75 rounded-lg p-4">
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-4">
                 <button
-                    onClick={() => setMic(prev => !prev)}
-                    className={`p-3 rounded-full transition-colors ${micOn ? 'bg-gray-600 hover:bg-gray-700' : 'bg-red-500 hover:bg-red-600'
-                        }`}
+                    onClick={toggleMic}
+                    className={`p-3 rounded-full ${micOn ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} text-white`}
                 >
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        {micOn ? (
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                        ) : (
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 5.586A2 2 0 015 7v3a9 9 0 009 9 9 9 0 009-9V7a2 2 0 00-2-2h-1.586L5.586 5.586zM12 19v4m-4 0h8" />
-                        )}
-                    </svg>
+                    {micOn ? '🎤' : '🔇'}
                 </button>
 
                 <button
-                    onClick={() => setCamera(prev => !prev)}
-                    className={`p-3 rounded-full transition-colors ${cameraOn ? 'bg-gray-600 hover:bg-gray-700' : 'bg-red-500 hover:bg-red-600'
-                        }`}
+                    onClick={toggleCamera}
+                    className={`p-3 rounded-full ${cameraOn ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} text-white`}
                 >
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        {cameraOn ? (
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                        ) : (
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L12 21l-7.071-7.071M5.636 5.636L12 3l7.071 7.071" />
-                        )}
-                    </svg>
+                    {cameraOn ? '📹' : '📷'}
                 </button>
 
                 <button
                     onClick={endCall}
-                    className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-full flex items-center space-x-2 transition-colors"
+                    className="p-3 rounded-full bg-red-600 hover:bg-red-700 text-white"
                 >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 3l1.5 1.5m0 0L6 6m-1.5-1.5L3 6m1.5-1.5L6 3" />
-                    </svg>
-                    <span>End Call</span>
+                    📞
                 </button>
             </div>
 
             {/* Call info */}
-            {tokenData && (
-                <div className="absolute top-4 left-4 bg-black bg-opacity-50 text-white px-3 py-2 rounded-lg">
-                    <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                        <span className="text-sm">
-                            Consultation with {tokenData?.booking.clientName} & {tokenData?.booking.providerName}
-                        </span>
-                    </div>
-                </div>
-            )}
+            <div className="absolute top-4 left-4 text-white bg-black bg-opacity-50 px-3 py-1 rounded">
+                {tokenData?.booking.clientName} & {tokenData?.booking.providerName}
+            </div>
         </div>
-    );
-}
-
-export default function VideoCall(props: VideoCallProps) {
-    // Create Agora RTC client with useMemo to prevent recreation on every render
-    const agoraClient = useMemo(() => {
-        return AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
-    }, []);
-
-    return (
-        <AgoraRTCProvider client={agoraClient as any}>
-            <VideoCallContent {...props} />
-        </AgoraRTCProvider>
     );
 } 

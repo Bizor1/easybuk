@@ -197,8 +197,8 @@ export default function CallInterface({
             <VideoCall
                 bookingId={bookingId}
                 displayName={displayName}
-                onCallEnd={onCallEnd}
-                onCallStart={onCallStart}
+                onCallEnd={onCallEnd || (() => { })}
+                onCallStart={onCallStart || (() => { })}
             />
         );
     }
