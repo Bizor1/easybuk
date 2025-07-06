@@ -45,7 +45,12 @@ export default function DailyVideoCall({
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ bookingId }),
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        bookingId,
+                        callType,
+                        displayName
+                    }),
                 });
 
                 if (!response.ok) {
