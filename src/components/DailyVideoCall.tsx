@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { DailyProvider, useDaily, useParticipantIds, useParticipantProperty, useMeetingState, useMediaTrack } from '@daily-co/daily-react';
 import DailyIframe from '@daily-co/daily-js';
 
@@ -158,6 +158,17 @@ function CallInterface({ roomUrl, displayName, callType, onCallEnd, onCallStart,
     const [isJoining, setIsJoining] = useState(false);
     const [callStatus, setCallStatus] = useState('Ready to join');
 
+    // Debug logging
+    useEffect(() => {
+        console.log('📹 Daily Call State:', {
+            meetingState,
+            participantIds,
+            participantCount: participantIds.length,
+            hasJoined,
+            callType
+        });
+    }, [meetingState, participantIds, hasJoined, callType]);
+
     // Handle meeting state changes
     useEffect(() => {
         switch (meetingState) {
@@ -193,6 +204,18 @@ function CallInterface({ roomUrl, displayName, callType, onCallEnd, onCallStart,
         if (!callObject) return;
 
         try {
+            // Check permissions first
+            console.log('📱 Checking permissions for call...');
+            const permissions = await navigator.mediaDevices.getUserMedia({
+                video: callType === 'video',
+                audio: true
+            });
+
+            if (permissions) {
+                console.log('✅ Permissions granted, joining call');
+                permissions.getTracks().forEach(track => track.stop()); // Stop test stream
+            }
+
             await callObject.join({
                 url: roomUrl,
                 userName: displayName,
@@ -201,7 +224,7 @@ function CallInterface({ roomUrl, displayName, callType, onCallEnd, onCallStart,
             });
         } catch (error) {
             console.error('Failed to join call:', error);
-            setCallStatus('Failed to join call');
+            setCallStatus('Failed to join call - check permissions');
         }
     }, [callObject, roomUrl, displayName, callType]);
 
@@ -303,7 +326,9 @@ function ParticipantGrid({ participantIds, callType }: { participantIds: string[
 
     const gridClass = participantIds.length === 1
         ? 'flex items-center justify-center'
-        : `grid grid-cols-${Math.min(participantIds.length, 2)} gap-4`;
+        : participantIds.length === 2
+            ? 'grid grid-cols-2 gap-4'
+            : 'grid grid-cols-1 gap-4';
 
     return (
         <div className={`w-full h-full p-4 ${gridClass}`}>
@@ -323,16 +348,44 @@ function ParticipantTile({ participantId, callType }: { participantId: string, c
     const audioMediaTrack = useMediaTrack(participantId, 'audio');
     const isLocal = participantId === 'local';
 
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const audioRef = useRef<HTMLAudioElement>(null);
+
+    // Debug logging
+    useEffect(() => {
+        console.log(`🎥 Participant ${participantId}:`, {
+            userName,
+            isLocal,
+            videoTrack,
+            audioTrack,
+            hasVideoMediaTrack: !!videoMediaTrack?.track,
+            hasAudioMediaTrack: !!audioMediaTrack?.track,
+            callType
+        });
+    }, [participantId, userName, isLocal, videoTrack, audioTrack, videoMediaTrack?.track, audioMediaTrack?.track, callType]);
+
+    // Set video track
+    useEffect(() => {
+        if (videoRef.current && videoMediaTrack?.track) {
+            console.log(`🎥 Setting video track for ${participantId}`);
+            videoRef.current.srcObject = new MediaStream([videoMediaTrack.track]);
+        }
+    }, [videoMediaTrack?.track, participantId]);
+
+    // Set audio track
+    useEffect(() => {
+        if (audioRef.current && audioMediaTrack?.track) {
+            console.log(`🔊 Setting audio track for ${participantId}`);
+            audioRef.current.srcObject = new MediaStream([audioMediaTrack.track]);
+        }
+    }, [audioMediaTrack?.track, participantId]);
+
     return (
         <div className="relative bg-gray-800 rounded-lg overflow-hidden aspect-video">
             {/* Video */}
-            {callType === 'video' && videoTrack === 'playable' && videoMediaTrack?.track && (
+            {callType === 'video' && videoMediaTrack?.track && (
                 <video
-                    ref={(videoEl) => {
-                        if (videoEl && videoMediaTrack.track) {
-                            videoEl.srcObject = new MediaStream([videoMediaTrack.track]);
-                        }
-                    }}
+                    ref={videoRef}
                     className="w-full h-full object-cover"
                     autoPlay
                     playsInline
@@ -341,19 +394,15 @@ function ParticipantTile({ participantId, callType }: { participantId: string, c
             )}
 
             {/* Audio */}
-            {!isLocal && audioTrack === 'playable' && audioMediaTrack?.track && (
+            {!isLocal && audioMediaTrack?.track && (
                 <audio
-                    ref={(audioEl) => {
-                        if (audioEl && audioMediaTrack.track) {
-                            audioEl.srcObject = new MediaStream([audioMediaTrack.track]);
-                        }
-                    }}
+                    ref={audioRef}
                     autoPlay
                 />
             )}
 
             {/* Placeholder for video off or audio-only */}
-            {(callType === 'audio' || videoTrack !== 'playable') && (
+            {(callType === 'audio' || !videoMediaTrack?.track) && (
                 <div className="absolute inset-0 flex items-center justify-center bg-gray-700">
                     <div className="text-center">
                         <div className="w-16 h-16 bg-gray-600 rounded-full flex items-center justify-center mx-auto mb-2">
@@ -373,7 +422,7 @@ function ParticipantTile({ participantId, callType }: { participantId: string, c
 
             {/* Mute indicators */}
             <div className="absolute top-2 right-2 flex space-x-1">
-                {audioTrack !== 'playable' && (
+                {!audioMediaTrack?.track && (
                     <div className="bg-red-600 p-1 rounded">
                         <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
@@ -381,7 +430,7 @@ function ParticipantTile({ participantId, callType }: { participantId: string, c
                         </svg>
                     </div>
                 )}
-                {callType === 'video' && videoTrack !== 'playable' && (
+                {callType === 'video' && !videoMediaTrack?.track && (
                     <div className="bg-red-600 p-1 rounded">
                         <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
