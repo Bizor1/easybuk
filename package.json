@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@daily-co/daily-js": "^0.80.0",
+    "@daily-co/daily-react": "^0.22.0",
     "@heroicons/react": "^2.2.0",
     "@prisma/client": "^6.9.0",
     "@types/bcrypt": "^5.0.2",
@@ -25,6 +26,7 @@
     "cloudinary": "^2.6.1",
     "cookies-next": "^4.1.1",
     "jose": "^5.2.0",
+    "jotai": "^2.12.5",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.1",
     "nanoid": "^5.1.5",
