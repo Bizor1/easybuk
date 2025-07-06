@@ -82,87 +82,33 @@ export default function DailyVideoCall({
             try {
                 setCallStatus('Joining call...');
 
-                // Create Daily iframe with error handling for duplicate instances
+                // Clean up any existing Daily iframes first
+                const existingIframes = document.querySelectorAll('iframe[src*="daily.co"]');
+                existingIframes.forEach(iframe => iframe.remove());
+
+                // Wait a moment for cleanup
+                await new Promise(resolve => setTimeout(resolve, 100));
+
+                // Create Daily iframe with minimal configuration to avoid postMessage issues
                 let frame;
                 try {
                     frame = (window as any).DailyIframe.createFrame({
-                        iframeStyle: {
-                            position: 'fixed',
-                            top: '0',
-                            left: '0',
-                            width: '100%',
-                            height: '100%',
-                            zIndex: 9999,
-                            border: 'none'
-                        },
                         showLeaveButton: true,
-                        showFullscreenButton: true,
-                        theme: {
-                            colors: {
-                                accent: '#007bff',
-                                accentText: '#ffffff',
-                                background: '#f8f9fa',
-                                backgroundAccent: '#e9ecef',
-                                baseText: '#212529',
-                                border: '#dee2e6',
-                                mainAreaBg: '#ffffff',
-                                mainAreaBgAccent: '#f8f9fa',
-                                mainAreaText: '#212529',
-                                supportiveText: '#6c757d'
-                            }
-                        }
+                        showFullscreenButton: true
                     });
                 } catch (frameError: any) {
-                    // Handle duplicate instance error
-                    if (frameError.message?.includes('Duplicate DailyIframe instances are not allowed')) {
-                        console.warn('Duplicate Daily iframe detected, cleaning up...');
-                        // Force cleanup and retry
-                        try {
-                            // Remove any existing Daily iframes from the DOM
-                            const existingIframes = document.querySelectorAll('iframe[src*="daily.co"]');
-                            existingIframes.forEach(iframe => iframe.remove());
-
-                            // Wait a moment and retry
-                            await new Promise(resolve => setTimeout(resolve, 100));
-                            frame = (window as any).DailyIframe.createFrame({
-                                iframeStyle: {
-                                    position: 'fixed',
-                                    top: '0',
-                                    left: '0',
-                                    width: '100%',
-                                    height: '100%',
-                                    zIndex: 9999,
-                                    border: 'none'
-                                },
-                                showLeaveButton: true,
-                                showFullscreenButton: true,
-                                theme: {
-                                    colors: {
-                                        accent: '#007bff',
-                                        accentText: '#ffffff',
-                                        background: '#f8f9fa',
-                                        backgroundAccent: '#e9ecef',
-                                        baseText: '#212529',
-                                        border: '#dee2e6',
-                                        mainAreaBg: '#ffffff',
-                                        mainAreaBgAccent: '#f8f9fa',
-                                        mainAreaText: '#212529',
-                                        supportiveText: '#6c757d'
-                                    }
-                                }
-                            });
-                        } catch (retryError) {
-                            console.error('Failed to create Daily iframe after cleanup:', retryError);
-                            throw retryError;
-                        }
-                    } else {
-                        throw frameError;
-                    }
+                    console.error('Failed to create Daily iframe:', frameError);
+                    throw new Error(`Failed to create Daily iframe: ${frameError.message}`);
                 }
 
                 // Ensure frame was created successfully
                 if (!frame) {
                     throw new Error('Failed to create Daily iframe');
+                }
+
+                // Validate frame has required methods
+                if (typeof frame.join !== 'function' || typeof frame.on !== 'function') {
+                    throw new Error('Daily iframe is not properly initialized');
                 }
 
                 // Set up event listeners
