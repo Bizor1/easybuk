@@ -68,7 +68,7 @@ export default function DailyVideoCall({
         };
 
         createRoom();
-    }, [bookingId]);
+    }, [bookingId, callType, displayName]);
 
     // Create call object when room is ready
     useEffect(() => {
@@ -178,9 +178,11 @@ function CallInterface({ roomUrl, displayName, callType, onCallEnd, onCallStart,
                 break;
             case 'joined-meeting':
                 setCallStatus('Connected to call!');
-                setHasJoined(true);
+                if (!hasJoined) {
+                    setHasJoined(true);
+                    onCallStart();
+                }
                 setIsJoining(false);
-                onCallStart();
                 break;
             case 'left-meeting':
                 setCallStatus('Call ended');
@@ -197,7 +199,7 @@ function CallInterface({ roomUrl, displayName, callType, onCallEnd, onCallStart,
                 setIsJoining(false);
                 break;
         }
-    }, [meetingState, onCallStart, onCallEnd]);
+    }, [meetingState, onCallStart, onCallEnd, hasJoined]);
 
     // Join call
     const joinCall = useCallback(async () => {
@@ -315,7 +317,16 @@ function CallInterface({ roomUrl, displayName, callType, onCallEnd, onCallStart,
 
 // Participant grid component
 function ParticipantGrid({ participantIds, callType }: { participantIds: string[], callType: 'video' | 'audio' }) {
-    if (participantIds.length === 0) {
+    // Always include local participant
+    const allParticipants = ['local', ...participantIds.filter(id => id !== 'local')];
+
+    console.log('🎭 ParticipantGrid:', {
+        originalParticipantIds: participantIds,
+        allParticipants,
+        totalCount: allParticipants.length
+    });
+
+    if (allParticipants.length === 0) {
         return (
             <div className="text-white text-center">
                 <p className="text-lg mb-2">Waiting for participants...</p>
@@ -324,15 +335,15 @@ function ParticipantGrid({ participantIds, callType }: { participantIds: string[
         );
     }
 
-    const gridClass = participantIds.length === 1
+    const gridClass = allParticipants.length === 1
         ? 'flex items-center justify-center'
-        : participantIds.length === 2
+        : allParticipants.length === 2
             ? 'grid grid-cols-2 gap-4'
             : 'grid grid-cols-1 gap-4';
 
     return (
         <div className={`w-full h-full p-4 ${gridClass}`}>
-            {participantIds.map((id) => (
+            {allParticipants.map((id) => (
                 <ParticipantTile key={id} participantId={id} callType={callType} />
             ))}
         </div>
