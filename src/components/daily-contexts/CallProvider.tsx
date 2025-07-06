@@ -62,6 +62,25 @@ export function CallProvider({ children, domain, room, userName }: CallProviderP
         callObject.join({
             url: room,
             userName: userName,
+            startVideoOff: false,  // Enable video from start
+            startAudioOff: false,  // Enable audio from start
+        }).then(() => {
+            console.log('✅ CallProvider: Join successful, enabling local media');
+
+            // Explicitly enable local video and audio after joining
+            setTimeout(() => {
+                if (callObject) {
+                    console.log('🎥 CallProvider: Setting local video to true');
+                    callObject.setLocalVideo(true);
+
+                    console.log('🎤 CallProvider: Setting local audio to true');
+                    callObject.setLocalAudio(true);
+                }
+            }, 1000); // Give a moment for the call to establish
+
+        }).catch((error) => {
+            console.error('❌ CallProvider: Join failed:', error);
+            setCallState(CALL_STATE_ERROR);
         });
     }, [callObject, callState, room, userName]);
 
