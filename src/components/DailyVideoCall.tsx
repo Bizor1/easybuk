@@ -97,7 +97,6 @@ export default function DailyVideoCall({
                         },
                         showLeaveButton: true,
                         showFullscreenButton: true,
-                        showParticipantCount: true,
                         theme: {
                             accent: '#007bff',
                             accentText: '#ffffff',
@@ -135,7 +134,6 @@ export default function DailyVideoCall({
                                 },
                                 showLeaveButton: true,
                                 showFullscreenButton: true,
-                                showParticipantCount: true,
                                 theme: {
                                     accent: '#007bff',
                                     accentText: '#ffffff',
