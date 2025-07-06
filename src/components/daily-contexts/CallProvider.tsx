@@ -52,36 +52,98 @@ export function CallProvider({ children, domain, room, userName }: CallProviderP
     }, []);
 
     // Join function as recommended by Daily.co
-    const join = useCallback(() => {
+    const join = useCallback(async () => {
         if (!callObject || callState !== CALL_STATE_CREATING) return;
 
         console.log('🚪 CallProvider: Joining call:', { room, userName });
 
         setCallState(CALL_STATE_JOINING);
 
-        callObject.join({
-            url: room,
-            userName: userName,
-            startVideoOff: false,  // Enable video from start
-            startAudioOff: false,  // Enable audio from start
-        }).then(() => {
-            console.log('✅ CallProvider: Join successful, enabling local media');
+        try {
+            // Check for media permissions first
+            console.log('🔍 CallProvider: Checking media permissions...');
 
-            // Explicitly enable local video and audio after joining
-            setTimeout(() => {
-                if (callObject) {
-                    console.log('🎥 CallProvider: Setting local video to true');
-                    callObject.setLocalVideo(true);
+            // Explicitly request media permissions before joining
+            try {
+                console.log('📱 CallProvider: Requesting camera and microphone permissions...');
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: true,
+                    audio: true
+                });
+                console.log('✅ CallProvider: Media permissions granted');
 
+                // Stop the test stream immediately
+                stream.getTracks().forEach(track => track.stop());
+
+            } catch (permissionError) {
+                console.error('⚠️ CallProvider: Media permission denied:', permissionError);
+                // Continue anyway - Daily might handle this
+            }
+
+            const joinResult = await callObject.join({
+                url: room,
+                userName: userName,
+                startVideoOff: false,  // Enable video from start
+                startAudioOff: false,  // Enable audio from start
+            });
+
+            console.log('✅ CallProvider: Join successful:', joinResult);
+            console.log('📊 CallProvider: Current call state after join:', callObject.meetingState());
+            console.log('👥 CallProvider: Participants after join:', Object.keys(callObject.participants()).length);
+
+            // Check local participant state
+            const participants = callObject.participants();
+            const localParticipant = Object.values(participants).find((p: any) => p.local);
+            console.log('🎭 CallProvider: Local participant after join:', {
+                sessionId: localParticipant?.session_id,
+                userName: localParticipant?.user_name,
+                video: localParticipant?.video,
+                audio: localParticipant?.audio,
+            });
+
+            // Give the call a moment to establish, then ensure media is enabled
+            setTimeout(async () => {
+                if (!callObject) return;
+
+                console.log('🎥 CallProvider: Explicitly enabling local media...');
+
+                try {
+                    // Enable video
+                    console.log('📹 CallProvider: Setting local video to true');
+                    await callObject.setLocalVideo(true);
+                    console.log('✅ CallProvider: Local video enabled');
+
+                    // Enable audio  
                     console.log('🎤 CallProvider: Setting local audio to true');
-                    callObject.setLocalAudio(true);
-                }
-            }, 1000); // Give a moment for the call to establish
+                    await callObject.setLocalAudio(true);
+                    console.log('✅ CallProvider: Local audio enabled');
 
-        }).catch((error) => {
+                    // Check final state
+                    const finalParticipants = callObject.participants();
+                    const finalLocalParticipant = Object.values(finalParticipants).find((p: any) => p.local);
+                    console.log('🎯 CallProvider: Final local participant state:', {
+                        video: finalLocalParticipant?.video,
+                        audio: finalLocalParticipant?.audio,
+                        tracks: finalLocalParticipant?.tracks,
+                    });
+
+                } catch (mediaError) {
+                    console.error('❌ CallProvider: Failed to enable local media:', mediaError);
+                    // Don't set error state for media issues, just log them
+                }
+            }, 2000); // Give more time for the call to establish
+
+        } catch (error) {
             console.error('❌ CallProvider: Join failed:', error);
+            if (error instanceof Error) {
+                console.error('❌ CallProvider: Error details:', {
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack,
+                });
+            }
             setCallState(CALL_STATE_ERROR);
-        });
+        }
     }, [callObject, callState, room, userName]);
 
     // Leave function
