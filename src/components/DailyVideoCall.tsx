@@ -169,6 +169,19 @@ function CallInterface({ roomUrl, displayName, callType, onCallEnd, onCallStart,
         });
     }, [meetingState, participantIds, hasJoined, callType]);
 
+    // Ensure local video is enabled after joining
+    useEffect(() => {
+        if (callObject && hasJoined && callType === 'video') {
+            console.log('📹 Ensuring local video is enabled...');
+            const participants = callObject.participants();
+            const localParticipant = participants?.local;
+            if (localParticipant && !localParticipant.video) {
+                console.log('📹 Enabling local video...');
+                callObject.setLocalVideo(true);
+            }
+        }
+    }, [callObject, hasJoined, callType]);
+
     // Handle meeting state changes
     useEffect(() => {
         switch (meetingState) {
@@ -206,27 +219,19 @@ function CallInterface({ roomUrl, displayName, callType, onCallEnd, onCallStart,
         if (!callObject) return;
 
         try {
-            // Check permissions first
-            console.log('📱 Checking permissions for call...');
-            const permissions = await navigator.mediaDevices.getUserMedia({
-                video: callType === 'video',
-                audio: true
-            });
-
-            if (permissions) {
-                console.log('✅ Permissions granted, joining call');
-                permissions.getTracks().forEach(track => track.stop()); // Stop test stream
-            }
+            console.log('📱 Joining call with media access...');
 
             await callObject.join({
                 url: roomUrl,
                 userName: displayName,
-                startVideoOff: callType === 'audio',
+                startVideoOff: callType === 'audio', // Video off for audio calls only
                 startAudioOff: false
             });
+
+            console.log('✅ Successfully joined call');
         } catch (error) {
             console.error('Failed to join call:', error);
-            setCallStatus('Failed to join call - check permissions');
+            setCallStatus('Failed to join call - check camera/microphone permissions');
         }
     }, [callObject, roomUrl, displayName, callType]);
 
@@ -317,11 +322,11 @@ function CallInterface({ roomUrl, displayName, callType, onCallEnd, onCallStart,
 
 // Participant grid component
 function ParticipantGrid({ participantIds, callType }: { participantIds: string[], callType: 'video' | 'audio' }) {
-    // Always include local participant
-    const allParticipants = ['local', ...participantIds.filter(id => id !== 'local')];
+    // Use the actual participant IDs from Daily
+    const allParticipants = participantIds.length > 0 ? participantIds : [];
 
     console.log('🎭 ParticipantGrid:', {
-        originalParticipantIds: participantIds,
+        participantIds,
         allParticipants,
         totalCount: allParticipants.length
     });
@@ -355,9 +360,10 @@ function ParticipantTile({ participantId, callType }: { participantId: string, c
     const userName = useParticipantProperty(participantId, 'user_name');
     const videoTrack = useParticipantProperty(participantId, 'tracks.video.state');
     const audioTrack = useParticipantProperty(participantId, 'tracks.audio.state');
+    const isLocalProp = useParticipantProperty(participantId, 'local');
     const videoMediaTrack = useMediaTrack(participantId, 'video');
     const audioMediaTrack = useMediaTrack(participantId, 'audio');
-    const isLocal = participantId === 'local';
+    const isLocal = isLocalProp === true;
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const audioRef = useRef<HTMLAudioElement>(null);
@@ -366,6 +372,7 @@ function ParticipantTile({ participantId, callType }: { participantId: string, c
     useEffect(() => {
         console.log(`🎥 Participant ${participantId}:`, {
             userName,
+            isLocalProp,
             isLocal,
             videoTrack,
             audioTrack,
@@ -373,7 +380,7 @@ function ParticipantTile({ participantId, callType }: { participantId: string, c
             hasAudioMediaTrack: !!audioMediaTrack?.track,
             callType
         });
-    }, [participantId, userName, isLocal, videoTrack, audioTrack, videoMediaTrack?.track, audioMediaTrack?.track, callType]);
+    }, [participantId, userName, isLocalProp, isLocal, videoTrack, audioTrack, videoMediaTrack?.track, audioMediaTrack?.track, callType]);
 
     // Set video track
     useEffect(() => {
@@ -466,9 +473,11 @@ function CallControls({
     onToggleMicrophone: () => void,
     onLeave: () => void
 }) {
-    const localParticipant = useParticipantProperty('local', 'tracks');
-    const videoEnabled = localParticipant?.video?.state === 'playable';
-    const audioEnabled = localParticipant?.audio?.state === 'playable';
+    const callObject = useDaily();
+    const participants = callObject?.participants();
+    const localParticipant = participants?.local;
+    const videoEnabled = localParticipant?.video;
+    const audioEnabled = localParticipant?.audio;
 
     return (
         <>
