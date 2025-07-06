@@ -371,39 +371,33 @@ function ParticipantGrid({ participantIds, callType }: { participantIds: string[
     );
 }
 
-// Individual participant tile
-function ParticipantTile({ participantId, callType }: { participantId: string, callType: 'video' | 'audio' }) {
-    const callObject = useDaily();
-    const isLocal = participantId === 'local';
+// ParticipantTile component - handles individual participant video/audio
+interface ParticipantTileProps {
+    participantId: string;
+    callType: 'video' | 'audio';
+}
 
-    // Get participant properties
-    const userName = useParticipantProperty(participantId, 'user_name');
-    const videoTrack = useParticipantProperty(participantId, 'tracks.video.state');
-    const audioTrack = useParticipantProperty(participantId, 'tracks.audio.state');
-    const videoMediaTrack = useMediaTrack(participantId, 'video');
-    const audioMediaTrack = useMediaTrack(participantId, 'audio');
-
-    // For local participant, get info directly from call object
-    const participants = callObject?.participants();
-    const localParticipant = participants?.local;
-    const displayName = isLocal ? (localParticipant?.user_name || 'You') : userName;
-
+const ParticipantTile: React.FC<ParticipantTileProps> = ({ participantId, callType }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const audioRef = useRef<HTMLAudioElement>(null);
 
-    // Debug logging
-    useEffect(() => {
-        console.log(`🎥 Participant ${participantId}:`, {
-            userName,
-            displayName,
-            isLocal,
-            videoTrack,
-            audioTrack,
-            hasVideoMediaTrack: !!videoMediaTrack?.track,
-            hasAudioMediaTrack: !!audioMediaTrack?.track,
-            callType
-        });
-    }, [participantId, userName, displayName, isLocal, videoTrack, audioTrack, videoMediaTrack?.track, audioMediaTrack?.track, callType]);
+    // Get participant info
+    const userName = useParticipantProperty(participantId, 'user_name');
+    const isLocal = useParticipantProperty(participantId, 'local');
+
+    // Get media tracks
+    const videoMediaTrack = useMediaTrack(participantId, 'video');
+    const audioMediaTrack = useMediaTrack(participantId, 'audio');
+
+    console.log(`🎥 ParticipantTile for ${participantId}:`, {
+        participantId,
+        userName,
+        isLocal,
+        videoState: videoMediaTrack?.state,
+        audioState: audioMediaTrack?.state,
+        hasVideoTrack: !!videoMediaTrack?.track,
+        hasAudioTrack: !!audioMediaTrack?.track,
+    });
 
     // Set video track
     useEffect(() => {
@@ -413,37 +407,39 @@ function ParticipantTile({ participantId, callType }: { participantId: string, c
         }
     }, [videoMediaTrack?.track, participantId]);
 
-    // Set audio track
+    // Set audio track  
     useEffect(() => {
-        if (audioRef.current && audioMediaTrack?.track) {
+        if (audioRef.current && audioMediaTrack?.track && !isLocal) {
             console.log(`🔊 Setting audio track for ${participantId}`);
             audioRef.current.srcObject = new MediaStream([audioMediaTrack.track]);
         }
-    }, [audioMediaTrack?.track, participantId]);
+    }, [audioMediaTrack?.track, participantId, isLocal]);
+
+    const displayName = userName || (isLocal ? 'You' : 'Guest');
 
     return (
         <div className="relative bg-gray-800 rounded-lg overflow-hidden aspect-video">
-            {/* Video */}
-            {callType === 'video' && videoMediaTrack?.track && (
+            {/* Video element */}
+            {callType === 'video' && (
                 <video
                     ref={videoRef}
                     className="w-full h-full object-cover"
                     autoPlay
                     playsInline
-                    muted={isLocal}
+                    muted={isLocal} // Always mute local video to prevent echo
                 />
             )}
 
-            {/* Audio */}
-            {!isLocal && audioMediaTrack?.track && (
+            {/* Audio element for remote participants only */}
+            {!isLocal && (
                 <audio
                     ref={audioRef}
                     autoPlay
                 />
             )}
 
-            {/* Placeholder for video off or audio-only */}
-            {(callType === 'audio' || !videoMediaTrack?.track) && (
+            {/* Placeholder for video off or no video track */}
+            {(!videoMediaTrack?.track || callType === 'audio') && (
                 <div className="absolute inset-0 flex items-center justify-center bg-gray-700">
                     <div className="text-center">
                         <div className="w-16 h-16 bg-gray-600 rounded-full flex items-center justify-center mx-auto mb-2">
@@ -451,38 +447,24 @@ function ParticipantTile({ participantId, callType }: { participantId: string, c
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                             </svg>
                         </div>
-                        <p className="text-white text-sm">{displayName || 'Guest'}</p>
+                        <p className="text-white text-sm">{displayName}</p>
                     </div>
                 </div>
             )}
 
-            {/* Participant info */}
-            <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
-                {displayName || 'Guest'} {isLocal && '(You)'}
+            {/* Participant name overlay */}
+            <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm">
+                {displayName}
             </div>
 
-            {/* Mute indicators */}
+            {/* Status indicators */}
             <div className="absolute top-2 right-2 flex space-x-1">
-                {!audioMediaTrack?.track && (
-                    <div className="bg-red-600 p-1 rounded">
-                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
-                        </svg>
-                    </div>
-                )}
-                {callType === 'video' && !videoMediaTrack?.track && (
-                    <div className="bg-red-600 p-1 rounded">
-                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18" />
-                        </svg>
-                    </div>
-                )}
+                <div className={`w-2 h-2 rounded-full ${videoMediaTrack?.state === 'playable' ? 'bg-green-500' : 'bg-red-500'}`} />
+                <div className={`w-2 h-2 rounded-full ${audioMediaTrack?.state === 'playable' ? 'bg-green-500' : 'bg-red-500'}`} />
             </div>
         </div>
     );
-}
+};
 
 // Call controls component
 function CallControls({
