@@ -383,7 +383,9 @@ const ParticipantTile: React.FC<ParticipantTileProps> = ({ participantId, callTy
 
     // Get participant info
     const userName = useParticipantProperty(participantId, 'user_name');
-    const isLocal = useParticipantProperty(participantId, 'local');
+
+    // Properly identify local vs remote participant
+    const isLocal = participantId === 'local';
 
     // Get media tracks
     const videoMediaTrack = useMediaTrack(participantId, 'video');
@@ -402,20 +404,21 @@ const ParticipantTile: React.FC<ParticipantTileProps> = ({ participantId, callTy
     // Set video track
     useEffect(() => {
         if (videoRef.current && videoMediaTrack?.track) {
-            console.log(`🎥 Setting video track for ${participantId}`);
+            console.log(`🎥 Setting video track for ${participantId} (${isLocal ? 'local' : 'remote'})`);
             videoRef.current.srcObject = new MediaStream([videoMediaTrack.track]);
         }
-    }, [videoMediaTrack?.track, participantId]);
+    }, [videoMediaTrack?.track, participantId, isLocal]);
 
-    // Set audio track  
+    // Set audio track for remote participants only
     useEffect(() => {
         if (audioRef.current && audioMediaTrack?.track && !isLocal) {
-            console.log(`🔊 Setting audio track for ${participantId}`);
+            console.log(`🔊 Setting audio track for ${participantId} (remote)`);
             audioRef.current.srcObject = new MediaStream([audioMediaTrack.track]);
         }
     }, [audioMediaTrack?.track, participantId, isLocal]);
 
-    const displayName = userName || (isLocal ? 'You' : 'Guest');
+    // Display name logic
+    const displayName = isLocal ? (userName || 'You') : (userName || 'Guest');
 
     return (
         <div className="relative bg-gray-800 rounded-lg overflow-hidden aspect-video">
@@ -459,8 +462,13 @@ const ParticipantTile: React.FC<ParticipantTileProps> = ({ participantId, callTy
 
             {/* Status indicators */}
             <div className="absolute top-2 right-2 flex space-x-1">
-                <div className={`w-2 h-2 rounded-full ${videoMediaTrack?.state === 'playable' ? 'bg-green-500' : 'bg-red-500'}`} />
-                <div className={`w-2 h-2 rounded-full ${audioMediaTrack?.state === 'playable' ? 'bg-green-500' : 'bg-red-500'}`} />
+                {/* Video status */}
+                <div className={`w-2 h-2 rounded-full ${videoMediaTrack?.state === 'playable' ? 'bg-green-500' : 'bg-red-500'
+                    }`} title={`Video: ${videoMediaTrack?.state || 'off'}`} />
+
+                {/* Audio status */}
+                <div className={`w-2 h-2 rounded-full ${audioMediaTrack?.state === 'playable' ? 'bg-green-500' : 'bg-red-500'
+                    }`} title={`Audio: ${audioMediaTrack?.state || 'off'}`} />
             </div>
         </div>
     );
@@ -499,7 +507,7 @@ function CallControls({
                     {audioEnabled ? (
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                     ) : (
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 3l18 18" />
                     )}
                 </svg>
             </button>
