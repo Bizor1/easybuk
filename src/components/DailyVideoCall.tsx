@@ -229,6 +229,38 @@ function CallInterface({ roomUrl, displayName, callType, onCallEnd, onCallStart,
             });
 
             console.log('✅ Successfully joined call');
+
+            // Give a moment for the call to establish, then ensure media is enabled
+            setTimeout(async () => {
+                if (!callObject) return;
+
+                try {
+                    console.log('🔧 Ensuring local media is enabled...');
+
+                    // Enable audio for both video and audio calls
+                    await callObject.setLocalAudio(true);
+                    console.log('🎤 Audio enabled');
+
+                    // Enable video for video calls
+                    if (callType === 'video') {
+                        await callObject.setLocalVideo(true);
+                        console.log('📹 Video enabled');
+                    }
+
+                    // Check final state
+                    const participants = callObject.participants();
+                    const localParticipant = participants?.local;
+                    console.log('🎯 Final local participant state:', {
+                        video: localParticipant?.video,
+                        audio: localParticipant?.audio
+                    });
+
+                } catch (mediaError) {
+                    console.error('❌ Failed to enable media devices:', mediaError);
+                    setCallStatus('Media device error - check camera/microphone permissions');
+                }
+            }, 1000); // Wait 1 second for call to establish
+
         } catch (error) {
             console.error('Failed to join call:', error);
             setCallStatus('Failed to join call - check camera/microphone permissions');
@@ -405,17 +437,57 @@ const ParticipantTile: React.FC<ParticipantTileProps> = ({ participantId, callTy
     useEffect(() => {
         if (videoRef.current && videoMediaTrack?.track) {
             console.log(`🎥 Setting video track for ${participantId} (${isLocal ? 'local' : 'remote'})`);
-            videoRef.current.srcObject = new MediaStream([videoMediaTrack.track]);
+
+            try {
+                const mediaStream = new MediaStream([videoMediaTrack.track]);
+                videoRef.current.srcObject = mediaStream;
+
+                // Force video to play
+                videoRef.current.play().catch(error => {
+                    console.error(`❌ Failed to play video for ${participantId}:`, error);
+                });
+
+                console.log(`✅ Video track set successfully for ${participantId}`);
+            } catch (error) {
+                console.error(`❌ Error setting video track for ${participantId}:`, error);
+            }
+        } else {
+            console.log(`⚠️ No video track for ${participantId}:`, {
+                hasVideoRef: !!videoRef.current,
+                hasVideoTrack: !!videoMediaTrack?.track,
+                videoState: videoMediaTrack?.state
+            });
         }
-    }, [videoMediaTrack?.track, participantId, isLocal]);
+    }, [videoMediaTrack?.track, videoMediaTrack?.state, participantId, isLocal]);
 
     // Set audio track for remote participants only
     useEffect(() => {
         if (audioRef.current && audioMediaTrack?.track && !isLocal) {
             console.log(`🔊 Setting audio track for ${participantId} (remote)`);
-            audioRef.current.srcObject = new MediaStream([audioMediaTrack.track]);
+
+            try {
+                const mediaStream = new MediaStream([audioMediaTrack.track]);
+                audioRef.current.srcObject = mediaStream;
+
+                // Force audio to play
+                audioRef.current.play().catch(error => {
+                    console.error(`❌ Failed to play audio for ${participantId}:`, error);
+                });
+
+                console.log(`✅ Audio track set successfully for ${participantId}`);
+            } catch (error) {
+                console.error(`❌ Error setting audio track for ${participantId}:`, error);
+            }
+        } else {
+            if (!isLocal) {
+                console.log(`⚠️ No audio track for remote ${participantId}:`, {
+                    hasAudioRef: !!audioRef.current,
+                    hasAudioTrack: !!audioMediaTrack?.track,
+                    audioState: audioMediaTrack?.state
+                });
+            }
         }
-    }, [audioMediaTrack?.track, participantId, isLocal]);
+    }, [audioMediaTrack?.track, audioMediaTrack?.state, participantId, isLocal]);
 
     // Display name logic
     const displayName = isLocal ? (userName || 'You') : (userName || 'Guest');
@@ -430,6 +502,12 @@ const ParticipantTile: React.FC<ParticipantTileProps> = ({ participantId, callTy
                     autoPlay
                     playsInline
                     muted={isLocal} // Always mute local video to prevent echo
+                    controls={false}
+                    width="100%"
+                    height="100%"
+                    style={{
+                        transform: isLocal ? 'scaleX(-1)' : 'none' // Mirror local video
+                    }}
                 />
             )}
 
@@ -438,11 +516,12 @@ const ParticipantTile: React.FC<ParticipantTileProps> = ({ participantId, callTy
                 <audio
                     ref={audioRef}
                     autoPlay
+                    controls={false}
                 />
             )}
 
             {/* Placeholder for video off or no video track */}
-            {(!videoMediaTrack?.track || callType === 'audio') && (
+            {(videoMediaTrack?.state !== 'playable' || callType === 'audio') && (
                 <div className="absolute inset-0 flex items-center justify-center bg-gray-700">
                     <div className="text-center">
                         <div className="w-16 h-16 bg-gray-600 rounded-full flex items-center justify-center mx-auto mb-2">
@@ -451,6 +530,11 @@ const ParticipantTile: React.FC<ParticipantTileProps> = ({ participantId, callTy
                             </svg>
                         </div>
                         <p className="text-white text-sm">{displayName}</p>
+                        <p className="text-gray-400 text-xs mt-1">
+                            {videoMediaTrack?.state === 'loading' ? 'Loading...' :
+                                videoMediaTrack?.state === 'interrupted' ? 'Connection lost' :
+                                    videoMediaTrack?.state === 'off' ? 'Video off' : 'Connecting...'}
+                        </p>
                     </div>
                 </div>
             )}

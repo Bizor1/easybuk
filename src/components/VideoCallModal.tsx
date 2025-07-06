@@ -2,6 +2,7 @@
 
 import React from 'react';
 import CallInterface from './CallInterface';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface VideoCallModalProps {
     isOpen: boolean;
@@ -18,6 +19,8 @@ export default function VideoCallModal({
     participantName,
     callType = 'VIDEO_CALL'
 }: VideoCallModalProps) {
+    const { user } = useAuth();
+
     if (!isOpen) return null;
 
     const handleCallStart = () => {
@@ -28,6 +31,9 @@ export default function VideoCallModal({
         console.log('Daily video call ended for booking:', bookingId);
         onClose();
     };
+
+    // Use current user's name, not the other participant's name
+    const currentUserName = user?.name || 'You';
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -53,7 +59,7 @@ export default function VideoCallModal({
                 <div className="pt-16 h-full">
                     <CallInterface
                         bookingId={bookingId}
-                        displayName={participantName}
+                        displayName={currentUserName}
                         callType={callType}
                         onCallStart={handleCallStart}
                         onCallEnd={handleCallEnd}
