@@ -322,13 +322,29 @@ function CallInterface({ roomUrl, displayName, callType, onCallEnd, onCallStart,
 
 // Participant grid component
 function ParticipantGrid({ participantIds, callType }: { participantIds: string[], callType: 'video' | 'audio' }) {
-    // Use the actual participant IDs from Daily
-    const allParticipants = participantIds.length > 0 ? participantIds : [];
+    const callObject = useDaily();
+
+    // Get all participants including local
+    const allParticipants = [];
+
+    // Add local participant first
+    const participants = callObject?.participants();
+    if (participants?.local) {
+        allParticipants.push('local');
+    }
+
+    // Add remote participants
+    participantIds.forEach(id => {
+        if (id !== 'local') {
+            allParticipants.push(id);
+        }
+    });
 
     console.log('🎭 ParticipantGrid:', {
         participantIds,
         allParticipants,
-        totalCount: allParticipants.length
+        totalCount: allParticipants.length,
+        hasLocalParticipant: !!participants?.local
     });
 
     if (allParticipants.length === 0) {
@@ -357,13 +373,20 @@ function ParticipantGrid({ participantIds, callType }: { participantIds: string[
 
 // Individual participant tile
 function ParticipantTile({ participantId, callType }: { participantId: string, callType: 'video' | 'audio' }) {
+    const callObject = useDaily();
+    const isLocal = participantId === 'local';
+
+    // Get participant properties
     const userName = useParticipantProperty(participantId, 'user_name');
     const videoTrack = useParticipantProperty(participantId, 'tracks.video.state');
     const audioTrack = useParticipantProperty(participantId, 'tracks.audio.state');
-    const isLocalProp = useParticipantProperty(participantId, 'local');
     const videoMediaTrack = useMediaTrack(participantId, 'video');
     const audioMediaTrack = useMediaTrack(participantId, 'audio');
-    const isLocal = isLocalProp === true;
+
+    // For local participant, get info directly from call object
+    const participants = callObject?.participants();
+    const localParticipant = participants?.local;
+    const displayName = isLocal ? (localParticipant?.user_name || 'You') : userName;
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const audioRef = useRef<HTMLAudioElement>(null);
@@ -372,7 +395,7 @@ function ParticipantTile({ participantId, callType }: { participantId: string, c
     useEffect(() => {
         console.log(`🎥 Participant ${participantId}:`, {
             userName,
-            isLocalProp,
+            displayName,
             isLocal,
             videoTrack,
             audioTrack,
@@ -380,7 +403,7 @@ function ParticipantTile({ participantId, callType }: { participantId: string, c
             hasAudioMediaTrack: !!audioMediaTrack?.track,
             callType
         });
-    }, [participantId, userName, isLocalProp, isLocal, videoTrack, audioTrack, videoMediaTrack?.track, audioMediaTrack?.track, callType]);
+    }, [participantId, userName, displayName, isLocal, videoTrack, audioTrack, videoMediaTrack?.track, audioMediaTrack?.track, callType]);
 
     // Set video track
     useEffect(() => {
@@ -428,14 +451,14 @@ function ParticipantTile({ participantId, callType }: { participantId: string, c
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                             </svg>
                         </div>
-                        <p className="text-white text-sm">{userName || 'Guest'}</p>
+                        <p className="text-white text-sm">{displayName || 'Guest'}</p>
                     </div>
                 </div>
             )}
 
             {/* Participant info */}
             <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
-                {userName || 'Guest'} {isLocal && '(You)'}
+                {displayName || 'Guest'} {isLocal && '(You)'}
             </div>
 
             {/* Mute indicators */}
