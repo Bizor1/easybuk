@@ -41,6 +41,7 @@ export default function MessagingInterface({
     const [error, setError] = useState<string | null>(null);
     const [typing, setTyping] = useState(false);
     const [isVideoCallOpen, setIsVideoCallOpen] = useState(false);
+    const [selectedCallType, setSelectedCallType] = useState<'VIDEO_CALL' | 'PHONE_CALL'>('VIDEO_CALL');
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -206,25 +207,28 @@ export default function MessagingInterface({
             booking: booking
         });
 
-        // For testing, let's also allow calls for any confirmed booking
-        const hasCallableBookingType = booking?.bookingType === 'VIDEO_CALL' || booking?.bookingType === 'PHONE_CALL';
+        // Allow video calls for confirmed or in-progress bookings
         const hasValidStatus = booking?.status === 'CONFIRMED' || booking?.status === 'IN_PROGRESS';
 
-        // Temporary: Allow calls for any confirmed booking (for testing)
-        const isConfirmedBooking = booking?.status === 'CONFIRMED';
-
         console.log('🔍 Call check results:', {
-            hasCallableBookingType,
             hasValidStatus,
-            isConfirmedBooking,
-            finalResult: hasCallableBookingType && hasValidStatus
+            bookingStatus: booking?.status,
+            finalResult: hasValidStatus
         });
 
-        return (hasCallableBookingType && hasValidStatus) || isConfirmedBooking;
+        return hasValidStatus;
     };
 
     const handleStartVideoCall = () => {
         if (canStartVideoCall()) {
+            setSelectedCallType('VIDEO_CALL');
+            setIsVideoCallOpen(true);
+        }
+    };
+
+    const handleStartAudioCall = () => {
+        if (canStartVideoCall()) {
+            setSelectedCallType('PHONE_CALL');
             setIsVideoCallOpen(true);
         }
     };
@@ -361,7 +365,7 @@ export default function MessagingInterface({
 
                     {canStartVideoCall() && booking?.bookingType === 'PHONE_CALL' && (
                         <button
-                            onClick={handleStartVideoCall}
+                            onClick={handleStartAudioCall}
                             className="flex items-center space-x-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors shadow-sm"
                         >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -482,6 +486,7 @@ export default function MessagingInterface({
                     onClose={() => setIsVideoCallOpen(false)}
                     bookingId={bookingId}
                     participantName={otherParticipant.name}
+                    callType={selectedCallType}
                 />
             )}
         </div>

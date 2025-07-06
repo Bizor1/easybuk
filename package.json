@@ -10,6 +10,7 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@daily-co/daily-js": "^0.80.0",
     "@heroicons/react": "^2.2.0",
     "@prisma/client": "^6.9.0",
     "@types/bcrypt": "^5.0.2",

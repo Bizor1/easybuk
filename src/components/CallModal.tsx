@@ -17,6 +17,7 @@ const CallInterface = dynamic(() => import('./CallInterface'), {
 interface CallModalProps {
     isOpen: boolean;
     onClose: () => void;
+    bookingId: string;
     roomName: string;
     displayName: string;
     participantName: string;
@@ -26,6 +27,7 @@ interface CallModalProps {
 export default function CallModal({
     isOpen,
     onClose,
+    bookingId,
     roomName,
     displayName,
     participantName,
@@ -104,6 +106,7 @@ export default function CallModal({
                 {/* Call Interface */}
                 <div className="flex-1 p-0">
                     <CallInterface
+                        bookingId={bookingId}
                         roomName={roomName}
                         displayName={displayName}
                         callType={callType}

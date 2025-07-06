@@ -1,3 +1,9 @@
+// ==========================================
+// DEPRECATED: This Agora token API has been replaced by Daily video calling
+// New endpoint: /api/daily/create-booking-room
+// This file is kept for reference only
+// ==========================================
+
 import { NextRequest, NextResponse } from 'next/server';
 import { RtcTokenBuilder, RtcRole } from 'agora-access-token';
 import { getCurrentUser } from '@/lib/jwt';
@@ -6,6 +12,18 @@ import { prisma } from '@/lib/prisma';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
+    // Return deprecation notice
+    return NextResponse.json(
+        {
+            error: 'DEPRECATED: This Agora endpoint has been replaced by Daily video calling',
+            newEndpoint: '/api/daily/create-booking-room',
+            message: 'Please use the new Daily-based video calling system'
+        },
+        { status: 410 } // Gone
+    );
+
+    // Original implementation commented out
+    /*
     try {
         console.log('🎥 AGORA_TOKEN: ===============================================');
         console.log('🎥 AGORA_TOKEN: Token generation request received');
@@ -291,4 +309,5 @@ export async function POST(request: NextRequest) {
             { status: 500 }
         );
     }
+    */
 } 
