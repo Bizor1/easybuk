@@ -98,16 +98,18 @@ export default function DailyVideoCall({
                         showLeaveButton: true,
                         showFullscreenButton: true,
                         theme: {
-                            accent: '#007bff',
-                            accentText: '#ffffff',
-                            background: '#f8f9fa',
-                            backgroundAccent: '#e9ecef',
-                            baseText: '#212529',
-                            border: '#dee2e6',
-                            mainAreaBg: '#ffffff',
-                            mainAreaBgAccent: '#f8f9fa',
-                            mainAreaText: '#212529',
-                            supportiveText: '#6c757d'
+                            colors: {
+                                accent: '#007bff',
+                                accentText: '#ffffff',
+                                background: '#f8f9fa',
+                                backgroundAccent: '#e9ecef',
+                                baseText: '#212529',
+                                border: '#dee2e6',
+                                mainAreaBg: '#ffffff',
+                                mainAreaBgAccent: '#f8f9fa',
+                                mainAreaText: '#212529',
+                                supportiveText: '#6c757d'
+                            }
                         }
                     });
                 } catch (frameError: any) {
@@ -135,16 +137,18 @@ export default function DailyVideoCall({
                                 showLeaveButton: true,
                                 showFullscreenButton: true,
                                 theme: {
-                                    accent: '#007bff',
-                                    accentText: '#ffffff',
-                                    background: '#f8f9fa',
-                                    backgroundAccent: '#e9ecef',
-                                    baseText: '#212529',
-                                    border: '#dee2e6',
-                                    mainAreaBg: '#ffffff',
-                                    mainAreaBgAccent: '#f8f9fa',
-                                    mainAreaText: '#212529',
-                                    supportiveText: '#6c757d'
+                                    colors: {
+                                        accent: '#007bff',
+                                        accentText: '#ffffff',
+                                        background: '#f8f9fa',
+                                        backgroundAccent: '#e9ecef',
+                                        baseText: '#212529',
+                                        border: '#dee2e6',
+                                        mainAreaBg: '#ffffff',
+                                        mainAreaBgAccent: '#f8f9fa',
+                                        mainAreaText: '#212529',
+                                        supportiveText: '#6c757d'
+                                    }
                                 }
                             });
                         } catch (retryError) {
