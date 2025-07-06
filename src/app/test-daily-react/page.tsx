@@ -10,6 +10,7 @@ export default function TestDailyReact() {
     const [callObject, setCallObject] = useState<any>(null);
     const [isCreatingRoom, setIsCreatingRoom] = useState(false);
     const [roomData, setRoomData] = useState<any>(null);
+    const [audioPermissionGranted, setAudioPermissionGranted] = useState(false);
 
     // Create a test room
     const createTestRoom = useCallback(async () => {
@@ -47,6 +48,23 @@ export default function TestDailyReact() {
         }
     }, []);
 
+    // Request audio permission
+    const requestAudioPermission = useCallback(async () => {
+        try {
+            console.log('🎤 Requesting audio permission...');
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+            // Stop the test stream immediately
+            stream.getTracks().forEach(track => track.stop());
+
+            setAudioPermissionGranted(true);
+            console.log('✅ Audio permission granted');
+        } catch (error) {
+            console.error('❌ Audio permission denied:', error);
+            alert('Audio permission is required for this test. Please allow microphone access.');
+        }
+    }, []);
+
     // Create call object
     useEffect(() => {
         if (roomUrl && !callObject) {
@@ -59,6 +77,22 @@ export default function TestDailyReact() {
         <div className="container mx-auto p-6 max-w-6xl">
             <div className="bg-white rounded-lg shadow-lg p-6">
                 <h1 className="text-2xl font-bold mb-6 text-gray-800">Daily.co React Test Page</h1>
+
+                {/* Audio Permission Section */}
+                {!audioPermissionGranted && (
+                    <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <h2 className="text-lg font-semibold mb-2 text-yellow-800">Audio Permission Required</h2>
+                        <p className="text-yellow-700 mb-4">
+                            To properly test audio functionality, please grant microphone permission. This is required due to browser autoplay policies.
+                        </p>
+                        <button
+                            onClick={requestAudioPermission}
+                            className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-md font-medium transition-colors"
+                        >
+                            Grant Audio Permission
+                        </button>
+                    </div>
+                )}
 
                 {/* Setup Section */}
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg">
@@ -107,7 +141,7 @@ export default function TestDailyReact() {
                 </div>
 
                 {/* Call Section */}
-                {callObject && displayName && (
+                {callObject && displayName && audioPermissionGranted && (
                     <DailyProvider callObject={callObject}>
                         <TestCallInterface roomUrl={roomUrl} displayName={displayName} />
                     </DailyProvider>
@@ -117,11 +151,13 @@ export default function TestDailyReact() {
                 <div className="mt-6 p-4 bg-blue-50 rounded-lg">
                     <h3 className="text-lg font-semibold mb-2 text-blue-800">Instructions</h3>
                     <ul className="text-blue-700 space-y-1">
-                        <li>1. Enter your name</li>
-                        <li>2. Click &quot;Create Test Room&quot; to create a new room</li>
-                        <li>3. Click &quot;Join Call&quot; to join the room</li>
-                        <li>4. Open this page in another tab/browser to test with 2 participants</li>
-                        <li>5. Check the console logs to see participant identification details</li>
+                        <li>1. Grant audio permission first</li>
+                        <li>2. Enter your name</li>
+                        <li>3. Click &quot;Create Test Room&quot; to create a new room</li>
+                        <li>4. Click &quot;Join Call&quot; to join the room</li>
+                        <li>5. Open this page in another tab/browser to test with 2 participants</li>
+                        <li>6. Check that both video and audio work properly</li>
+                        <li>7. Check the console logs for detailed debugging information</li>
                     </ul>
                 </div>
             </div>
@@ -141,6 +177,8 @@ function TestCallInterface({ roomUrl, displayName }: TestCallInterfaceProps) {
     const participantIds = useParticipantIds();
     const [hasJoined, setHasJoined] = useState(false);
     const [debugInfo, setDebugInfo] = useState<any>({});
+    const [audioEnabled, setAudioEnabled] = useState(true);
+    const [videoEnabled, setVideoEnabled] = useState(true);
 
     // Debug logging
     useEffect(() => {
@@ -149,11 +187,13 @@ function TestCallInterface({ roomUrl, displayName }: TestCallInterfaceProps) {
             participantIds,
             participantCount: participantIds.length,
             hasJoined,
+            audioEnabled,
+            videoEnabled,
             timestamp: new Date().toISOString()
         };
         setDebugInfo(info);
         console.log('📊 Test Call Debug Info:', info);
-    }, [meetingState, participantIds, hasJoined]);
+    }, [meetingState, participantIds, hasJoined, audioEnabled, videoEnabled]);
 
     // Handle meeting state changes
     useEffect(() => {
@@ -175,22 +215,22 @@ function TestCallInterface({ roomUrl, displayName }: TestCallInterfaceProps) {
             console.log('📋 Join parameters:', {
                 url: roomUrl,
                 userName: displayName,
-                startVideoOff: false,
-                startAudioOff: false
+                startVideoOff: !videoEnabled,
+                startAudioOff: !audioEnabled
             });
 
             await callObject.join({
                 url: roomUrl,
                 userName: displayName,
-                startVideoOff: false,
-                startAudioOff: false
+                startVideoOff: !videoEnabled,
+                startAudioOff: !audioEnabled
             });
 
             console.log('✅ Join call successful');
         } catch (error) {
             console.error('❌ Failed to join test call:', error);
         }
-    }, [callObject, roomUrl, displayName]);
+    }, [callObject, roomUrl, displayName, videoEnabled, audioEnabled]);
 
     // Leave call
     const leaveCall = useCallback(async () => {
@@ -204,13 +244,39 @@ function TestCallInterface({ roomUrl, displayName }: TestCallInterfaceProps) {
         }
     }, [callObject]);
 
+    // Toggle audio
+    const toggleAudio = useCallback(async () => {
+        if (!callObject) return;
+
+        try {
+            await callObject.setLocalAudio(!audioEnabled);
+            setAudioEnabled(!audioEnabled);
+            console.log(`🎤 Audio ${!audioEnabled ? 'enabled' : 'disabled'}`);
+        } catch (error) {
+            console.error('❌ Failed to toggle audio:', error);
+        }
+    }, [callObject, audioEnabled]);
+
+    // Toggle video
+    const toggleVideo = useCallback(async () => {
+        if (!callObject) return;
+
+        try {
+            await callObject.setLocalVideo(!videoEnabled);
+            setVideoEnabled(!videoEnabled);
+            console.log(`📹 Video ${!videoEnabled ? 'enabled' : 'disabled'}`);
+        } catch (error) {
+            console.error('❌ Failed to toggle video:', error);
+        }
+    }, [callObject, videoEnabled]);
+
     return (
         <div className="space-y-6">
-            {/* Call Controls */}
+            {/* Controls */}
             <div className="p-4 bg-gray-50 rounded-lg">
-                <h3 className="text-lg font-semibold mb-4">Call Controls</h3>
+                <h3 className="text-lg font-semibold mb-4">Controls</h3>
 
-                <div className="flex space-x-4 mb-4">
+                <div className="flex flex-wrap gap-4 mb-4">
                     <button
                         onClick={joinCall}
                         disabled={hasJoined}
@@ -232,11 +298,39 @@ function TestCallInterface({ roomUrl, displayName }: TestCallInterfaceProps) {
                     >
                         Leave Call
                     </button>
+
+                    <button
+                        onClick={toggleAudio}
+                        disabled={!hasJoined}
+                        className={`px-4 py-2 rounded-md font-medium transition-colors ${!hasJoined
+                            ? 'bg-gray-400 cursor-not-allowed'
+                            : audioEnabled
+                                ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                                : 'bg-red-600 hover:bg-red-700 text-white'
+                            }`}
+                    >
+                        {audioEnabled ? '🎤 Mute' : '🎤 Unmute'}
+                    </button>
+
+                    <button
+                        onClick={toggleVideo}
+                        disabled={!hasJoined}
+                        className={`px-4 py-2 rounded-md font-medium transition-colors ${!hasJoined
+                            ? 'bg-gray-400 cursor-not-allowed'
+                            : videoEnabled
+                                ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                                : 'bg-red-600 hover:bg-red-700 text-white'
+                            }`}
+                    >
+                        {videoEnabled ? '📹 Stop Video' : '📹 Start Video'}
+                    </button>
                 </div>
 
                 <div className="text-sm text-gray-600">
                     <p><strong>Meeting State:</strong> {meetingState}</p>
                     <p><strong>Participant Count:</strong> {participantIds.length}</p>
+                    <p><strong>Audio:</strong> {audioEnabled ? 'Enabled' : 'Disabled'}</p>
+                    <p><strong>Video:</strong> {videoEnabled ? 'Enabled' : 'Disabled'}</p>
                 </div>
             </div>
 
@@ -266,7 +360,7 @@ function TestCallInterface({ roomUrl, displayName }: TestCallInterfaceProps) {
             {/* Video Grid */}
             {hasJoined && (
                 <div className="p-4 bg-gray-900 rounded-lg">
-                    <h3 className="text-lg font-semibold mb-4 text-white">Video Grid</h3>
+                    <h3 className="text-lg font-semibold mb-4 text-white">Video Grid (with Audio)</h3>
                     <TestVideoGrid participantIds={participantIds} />
                 </div>
             )}
@@ -341,12 +435,15 @@ function TestVideoGrid({ participantIds }: { participantIds: string[] }) {
     );
 }
 
-// Test video tile component
+// Test video tile component with audio
 function TestVideoTile({ participantId }: { participantId: string }) {
     const videoRef = useRef<HTMLVideoElement>(null);
+    const audioRef = useRef<HTMLAudioElement>(null);
     const userName = useParticipantProperty(participantId, 'user_name');
     const isLocal = participantId === 'local';
     const videoMediaTrack = useMediaTrack(participantId, 'video');
+    const audioMediaTrack = useMediaTrack(participantId, 'audio');
+    const [audioPlaying, setAudioPlaying] = useState(false);
 
     // Set video track
     useEffect(() => {
@@ -363,7 +460,48 @@ function TestVideoTile({ participantId }: { participantId: string }) {
         }
     }, [videoMediaTrack?.track, participantId, isLocal]);
 
+    // Set audio track for remote participants
+    useEffect(() => {
+        if (audioRef.current && audioMediaTrack?.track && !isLocal) {
+            console.log(`🎤 Setting audio track for ${participantId} (remote)`);
+
+            try {
+                const mediaStream = new MediaStream([audioMediaTrack.track]);
+                audioRef.current.srcObject = mediaStream;
+
+                // Attempt to play audio
+                audioRef.current.play()
+                    .then(() => {
+                        setAudioPlaying(true);
+                        console.log(`✅ Audio playing for ${participantId}`);
+                    })
+                    .catch((error) => {
+                        console.error(`❌ Audio autoplay failed for ${participantId}:`, error);
+                        setAudioPlaying(false);
+                    });
+            } catch (error) {
+                console.error(`❌ Error setting audio track for ${participantId}:`, error);
+            }
+        }
+    }, [audioMediaTrack?.track, participantId, isLocal]);
+
+    // Manual audio play button for remote participants
+    const playAudioManually = useCallback(() => {
+        if (audioRef.current) {
+            audioRef.current.play()
+                .then(() => {
+                    setAudioPlaying(true);
+                    console.log(`✅ Manual audio play successful for ${participantId}`);
+                })
+                .catch((error) => {
+                    console.error(`❌ Manual audio play failed for ${participantId}:`, error);
+                });
+        }
+    }, [participantId]);
+
     const displayName = isLocal ? (userName || 'You') : (userName || 'Guest');
+    const hasAudioTrack = !!audioMediaTrack?.track;
+    const hasVideoTrack = !!videoMediaTrack?.track;
 
     return (
         <div className="relative bg-gray-800 rounded-lg overflow-hidden aspect-video">
@@ -378,6 +516,17 @@ function TestVideoTile({ participantId }: { participantId: string }) {
                     transform: isLocal ? 'scaleX(-1)' : 'none'
                 }}
             />
+
+            {/* Audio element for remote participants */}
+            {!isLocal && hasAudioTrack && (
+                <audio
+                    ref={audioRef}
+                    autoPlay
+                    playsInline
+                    controls={false}
+                    style={{ display: 'none' }}
+                />
+            )}
 
             {/* Placeholder when no video */}
             {videoMediaTrack?.state !== 'playable' && (
@@ -396,15 +545,38 @@ function TestVideoTile({ participantId }: { participantId: string }) {
                 </div>
             )}
 
+            {/* Audio control for remote participants */}
+            {!isLocal && hasAudioTrack && !audioPlaying && (
+                <button
+                    onClick={playAudioManually}
+                    className="absolute top-2 left-2 bg-yellow-600 hover:bg-yellow-700 text-white px-2 py-1 rounded text-xs"
+                    title="Click to enable audio"
+                >
+                    🔊 Enable Audio
+                </button>
+            )}
+
             {/* Participant name overlay */}
-            <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
-                {displayName} ({participantId})
+            <div className="absolute bottom-2 left-2 bg-black bg-opacity-75 text-white px-2 py-1 rounded text-xs">
+                {displayName}
+                {isLocal && ' (You)'}
             </div>
 
-            {/* Status indicator */}
-            <div className="absolute top-2 right-2">
-                <div className={`w-3 h-3 rounded-full ${videoMediaTrack?.state === 'playable' ? 'bg-green-500' : 'bg-red-500'
+            {/* Status indicators */}
+            <div className="absolute top-2 right-2 flex space-x-1">
+                {/* Video indicator */}
+                <div className={`w-3 h-3 rounded-full ${hasVideoTrack && videoMediaTrack?.state === 'playable' ? 'bg-green-500' : 'bg-red-500'
                     }`} title={`Video: ${videoMediaTrack?.state || 'off'}`} />
+
+                {/* Audio indicator */}
+                <div className={`w-3 h-3 rounded-full ${hasAudioTrack && audioMediaTrack?.state === 'playable' ? 'bg-blue-500' : 'bg-red-500'
+                    }`} title={`Audio: ${audioMediaTrack?.state || 'off'}`} />
+
+                {/* Audio playing indicator for remote participants */}
+                {!isLocal && hasAudioTrack && (
+                    <div className={`w-3 h-3 rounded-full ${audioPlaying ? 'bg-yellow-500' : 'bg-gray-500'
+                        }`} title={`Audio Playing: ${audioPlaying ? 'yes' : 'no'}`} />
+                )}
             </div>
         </div>
     );

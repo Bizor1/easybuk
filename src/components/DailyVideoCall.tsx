@@ -353,27 +353,15 @@ function CallInterface({ roomUrl, displayName, callType, onCallEnd, onCallStart,
 function ParticipantGrid({ participantIds, callType }: { participantIds: string[], callType: 'video' | 'audio' }) {
     const callObject = useDaily();
 
-    // Get all participants including local
-    const allParticipants = [];
-
-    // Add local participant first
-    const participants = callObject?.participants();
-    if (participants?.local) {
-        allParticipants.push('local');
-    }
-
-    // Add remote participants
-    participantIds.forEach(id => {
-        if (id !== 'local') {
-            allParticipants.push(id);
-        }
-    });
+    // Get all participants - use the participantIds from Daily React hooks, not the phantom 'local'
+    // Filter out any phantom 'local' participant since it doesn't represent a real participant
+    const allParticipants = participantIds.filter(id => id !== 'local');
 
     console.log('🎭 ParticipantGrid:', {
         participantIds,
         allParticipants,
         totalCount: allParticipants.length,
-        hasLocalParticipant: !!participants?.local
+        callObjectParticipants: callObject?.participants()
     });
 
     if (allParticipants.length === 0) {
@@ -413,8 +401,8 @@ const ParticipantTile: React.FC<ParticipantTileProps> = ({ participantId, callTy
     // Get participant info
     const userName = useParticipantProperty(participantId, 'user_name');
 
-    // Properly identify local vs remote participant
-    const isLocal = participantId === 'local';
+    // FIXED: Use the correct participant identification logic from the test page
+    const isLocal = useParticipantProperty(participantId, 'local');
 
     // Get media tracks
     const videoMediaTrack = useMediaTrack(participantId, 'video');
@@ -486,7 +474,7 @@ const ParticipantTile: React.FC<ParticipantTileProps> = ({ participantId, callTy
         }
     }, [audioMediaTrack?.track, audioMediaTrack?.state, participantId, isLocal]);
 
-    // Display name logic
+    // Display name logic - now using correct isLocal detection
     const displayName = isLocal ? (userName || 'You') : (userName || 'Guest');
 
     return (
