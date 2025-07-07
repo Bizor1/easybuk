@@ -2,14 +2,22 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import {
     ClockIcon,
     CheckCircleIcon,
     XCircleIcon,
     EyeIcon,
     ChatBubbleLeftRightIcon,
-    ExclamationTriangleIcon
+    ExclamationTriangleIcon,
+    VideoCameraIcon,
+    PhoneIcon
 } from '@heroicons/react/24/outline';
+
+// Dynamically import BookingVideoCall with SSR disabled
+const BookingVideoCall = dynamic(() => import('@/components/BookingVideoCall'), {
+    ssr: false
+});
 
 interface Booking {
     id: string;
@@ -74,6 +82,15 @@ export default function BookingsPage() {
     const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
     const [actionModal, setActionModal] = useState<{ type: 'accept' | 'decline'; booking: Booking } | null>(null);
     const [responseMessage, setResponseMessage] = useState('');
+    const [videoCallModal, setVideoCallModal] = useState<{
+        isOpen: boolean;
+        booking: Booking | null;
+        callType: 'VIDEO_CALL' | 'PHONE_CALL';
+    }>({
+        isOpen: false,
+        booking: null,
+        callType: 'VIDEO_CALL'
+    });
 
     const fetchBookings = useCallback(async () => {
         try {
@@ -449,6 +466,35 @@ export default function BookingsPage() {
                                                     </>
                                                 )}
 
+                                                {/* Video Call Buttons for CONFIRMED and IN_PROGRESS bookings */}
+                                                {(booking.status === 'CONFIRMED' || booking.status === 'IN_PROGRESS') && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => setVideoCallModal({
+                                                                isOpen: true,
+                                                                booking,
+                                                                callType: 'VIDEO_CALL'
+                                                            })}
+                                                            className="px-4 py-2 bg-gradient-to-r from-blue-100/80 to-sky-100/80 dark:from-blue-900/30 dark:to-sky-900/30 text-blue-600 dark:text-blue-400 rounded-lg hover:from-blue-200/80 hover:to-sky-200/80 transition-all transform hover:scale-105 text-sm font-medium flex items-center space-x-1"
+                                                        >
+                                                            <VideoCameraIcon className="w-4 h-4" />
+                                                            <span>Video Call</span>
+                                                        </button>
+
+                                                        <button
+                                                            onClick={() => setVideoCallModal({
+                                                                isOpen: true,
+                                                                booking,
+                                                                callType: 'PHONE_CALL'
+                                                            })}
+                                                            className="px-4 py-2 bg-gradient-to-r from-purple-100/80 to-violet-100/80 dark:from-purple-900/30 dark:to-violet-900/30 text-purple-600 dark:text-purple-400 rounded-lg hover:from-purple-200/80 hover:to-violet-200/80 transition-all transform hover:scale-105 text-sm font-medium flex items-center space-x-1"
+                                                        >
+                                                            <PhoneIcon className="w-4 h-4" />
+                                                            <span>Audio Call</span>
+                                                        </button>
+                                                    </>
+                                                )}
+
                                                 {(booking.status === 'IN_PROGRESS' || booking.status === 'ACTIVE') && (
                                                     <button
                                                         onClick={() => handleCompleteService(booking.id)}
@@ -462,7 +508,7 @@ export default function BookingsPage() {
 
                                                 <Link
                                                     href={`/provider/messages?client=${booking.client.name}`}
-                                                    className="px-4 py-2 bg-gradient-to-r from-purple-100/80 to-pink-100/80 dark:from-purple-900/30 dark:to-pink-900/30 text-purple-600 dark:text-purple-400 rounded-lg hover:from-purple-200/80 hover:to-pink-200/80 transition-all transform hover:scale-105 text-sm font-medium flex items-center space-x-1"
+                                                    className="px-4 py-2 bg-gradient-to-r from-gray-100/80 to-slate-100/80 dark:from-gray-900/30 dark:to-slate-900/30 text-gray-600 dark:text-gray-400 rounded-lg hover:from-gray-200/80 hover:to-slate-200/80 transition-all transform hover:scale-105 text-sm font-medium flex items-center space-x-1"
                                                 >
                                                     <ChatBubbleLeftRightIcon className="w-4 h-4" />
                                                     <span>Message</span>
@@ -624,6 +670,17 @@ export default function BookingsPage() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Video Call Modal */}
+            {videoCallModal.isOpen && videoCallModal.booking && (
+                <BookingVideoCall
+                    isOpen={videoCallModal.isOpen}
+                    onClose={() => setVideoCallModal({ isOpen: false, booking: null, callType: 'VIDEO_CALL' })}
+                    bookingId={videoCallModal.booking.id}
+                    participantName={videoCallModal.booking.client.name}
+                    callType={videoCallModal.callType}
+                />
             )}
 
             <style jsx>{`

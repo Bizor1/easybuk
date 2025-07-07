@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import dynamic from 'next/dynamic';
 import {
     CalendarIcon,
     CreditCardIcon,
@@ -16,7 +17,8 @@ import {
     ChatBubbleLeftRightIcon,
     EyeIcon,
     PlusIcon,
-    ExclamationTriangleIcon
+    ExclamationTriangleIcon,
+    VideoCameraIcon
 } from '@heroicons/react/24/outline';
 import {
     HeartIcon as HeartSolidIcon,
@@ -26,6 +28,11 @@ import Link from 'next/link';
 import Image from 'next/image';
 import NotificationBell from '@/components/NotificationBell';
 import ReviewModal from '@/components/ReviewModal';
+
+// Dynamically import BookingVideoCall with SSR disabled
+const BookingVideoCall = dynamic(() => import('@/components/BookingVideoCall'), {
+    ssr: false
+});
 
 interface Booking {
     id: string;
@@ -105,6 +112,15 @@ export default function ClientDashboard() {
     }>({
         totalUnread: 0,
         unreadByBooking: {}
+    });
+    const [videoCallModal, setVideoCallModal] = useState<{
+        isOpen: boolean;
+        booking: Booking | null;
+        callType: 'VIDEO_CALL' | 'PHONE_CALL';
+    }>({
+        isOpen: false,
+        booking: null,
+        callType: 'VIDEO_CALL'
     });
 
     // Load real data from API
@@ -602,6 +618,36 @@ export default function ClientDashboard() {
 
                                             {/* Actions */}
                                             <div className="flex flex-wrap gap-2 mt-4 lg:mt-0 lg:ml-4">
+                                                {/* Video Call Buttons for CONFIRMED and IN_PROGRESS bookings */}
+                                                {(booking.status === 'CONFIRMED' || booking.status === 'IN_PROGRESS') && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => setVideoCallModal({
+                                                                isOpen: true,
+                                                                booking,
+                                                                callType: 'VIDEO_CALL'
+                                                            })}
+                                                            className="px-4 py-2 bg-gradient-to-r from-blue-100/80 to-sky-100/80 dark:from-blue-900/30 dark:to-sky-900/30 text-blue-600 dark:text-blue-400 rounded-lg hover:from-blue-200/80 hover:to-sky-200/80 transition-all transform hover:scale-105 text-sm font-medium flex items-center space-x-1"
+                                                        >
+                                                            <VideoCameraIcon className="w-4 h-4" />
+                                                            <span className="hidden sm:inline">Video Call</span>
+                                                            <span className="sm:hidden">Video</span>
+                                                        </button>
+
+                                                        <button
+                                                            onClick={() => setVideoCallModal({
+                                                                isOpen: true,
+                                                                booking,
+                                                                callType: 'PHONE_CALL'
+                                                            })}
+                                                            className="px-4 py-2 bg-gradient-to-r from-purple-100/80 to-violet-100/80 dark:from-purple-900/30 dark:to-violet-900/30 text-purple-600 dark:text-purple-400 rounded-lg hover:from-purple-200/80 hover:to-violet-200/80 transition-all transform hover:scale-105 text-sm font-medium flex items-center space-x-1"
+                                                        >
+                                                            <PhoneIcon className="w-4 h-4" />
+                                                            <span className="hidden sm:inline">Audio Call</span>
+                                                            <span className="sm:hidden">Audio</span>
+                                                        </button>
+                                                    </>
+                                                )}
                                                 <button
                                                     onClick={() => setSelectedBooking(booking)}
                                                     className="px-4 py-2 bg-gradient-to-r from-blue-100/80 to-cyan-100/80 dark:from-blue-900/30 dark:to-cyan-900/30 text-blue-600 dark:text-blue-400 rounded-lg hover:from-blue-200/80 hover:to-cyan-200/80 transition-all transform hover:scale-105 text-sm font-medium flex items-center space-x-1"
