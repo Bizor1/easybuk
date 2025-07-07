@@ -96,14 +96,20 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { bookingId, content, messageType = 'TEXT', attachments = [] } = body;
+    const { bookingId, content, messageType = 'TEXT', attachments = [], videoCallData = null } = body;
 
     if (!bookingId || !content?.trim()) {
       return NextResponse.json({ error: 'Booking ID and content are required' }, { status: 400 });
     }
 
-    // Filter content for violations
-    const filterResult = ContentFilterService.filterContent(content.trim());
+    // Filter content for violations (skip filtering for video call invitations)
+    let filterResult;
+    if (messageType === 'VIDEO_CALL_INVITATION') {
+      // Don't filter video call invitation messages
+      filterResult = { isAllowed: true, filteredContent: content, violations: [], riskScore: 0 };
+    } else {
+      filterResult = ContentFilterService.filterContent(content.trim());
+    }
 
     if (!filterResult.isAllowed) {
       // Log the violation
@@ -185,8 +191,20 @@ export async function POST(request: NextRequest) {
     // Handle empty attachments array properly for PostgreSQL
     const attachmentsArray = attachments.length > 0 ? attachments : null;
 
+    // Handle video call data - store it in attachments field as JSON
+    let finalAttachments = attachmentsArray;
+    if (messageType === 'VIDEO_CALL_INVITATION' && videoCallData) {
+      // Store video call data in attachments field as special attachment
+      const videoCallAttachment = {
+        type: 'VIDEO_CALL_DATA',
+        data: videoCallData
+      };
+      finalAttachments = finalAttachments ? [...finalAttachments, videoCallAttachment] : [videoCallAttachment];
+    }
+
     // Use raw SQL to insert the message to bypass the problematic foreign key constraints
-    if (attachmentsArray) {
+    if (finalAttachments) {
+      const attachmentsJson = JSON.stringify(finalAttachments);
       await prisma.$executeRaw`
         INSERT INTO "Message" (
           id, content, "senderId", "senderType", "receiverId", "receiverType", 
@@ -194,7 +212,7 @@ export async function POST(request: NextRequest) {
         ) VALUES (
           ${messageId}, ${filterResult.filteredContent}, ${senderId}, ${senderType}, 
           ${receiverId}, ${receiverType}, ${bookingId}, ${messageType}::"MessageType", 
-          ${attachmentsArray}, false, ${flaggedValue}, ${flagReasonValue}, NOW()
+          ${attachmentsJson}, false, ${flaggedValue}, ${flagReasonValue}, NOW()
         )
       `;
     } else {

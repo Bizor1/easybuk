@@ -94,7 +94,11 @@ export default function MessagingInterface({
                     return {
                         ...msg,
                         attachments: parsedAttachments,
-                        createdAt: msg.createdAt
+                        createdAt: msg.createdAt,
+                        // Extract video call data from attachments if it's a video call invitation
+                        videoCallData: msg.messageType === 'VIDEO_CALL_INVITATION' && parsedAttachments ?
+                            parsedAttachments.find((att: any) => att.type === 'VIDEO_CALL_DATA')?.data :
+                            undefined
                     };
                 }));
             }
@@ -198,6 +202,17 @@ export default function MessagingInterface({
             console.error('Error marking messages as read:', error);
         }
     }, [bookingId]);
+
+    // Refresh messages (useful for video call invitations)
+    const refreshMessages = useCallback(() => {
+        fetchMessages();
+    }, [fetchMessages]);
+
+    // Auto-refresh messages every 5 seconds to catch new video call invitations
+    useEffect(() => {
+        const interval = setInterval(refreshMessages, 5000);
+        return () => clearInterval(interval);
+    }, [refreshMessages]);
 
     // Memoized video call availability check to prevent excessive re-renders and console logging
     const canStartVideoCall = useMemo(() => {

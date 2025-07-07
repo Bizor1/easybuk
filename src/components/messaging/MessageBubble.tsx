@@ -18,13 +18,19 @@ export interface Message {
     content: string;
     senderId: string;
     senderType: 'CLIENT' | 'PROVIDER' | 'SYSTEM';
-    messageType: 'TEXT' | 'IMAGE' | 'DOCUMENT' | 'SYSTEM';
+    messageType: 'TEXT' | 'IMAGE' | 'DOCUMENT' | 'SYSTEM' | 'VIDEO_CALL_INVITATION';
     attachments?: MessageAttachment[];
     isRead: boolean;
     flagged?: boolean;
     createdAt: string;
     senderName?: string;
     senderImage?: string;
+    videoCallData?: {
+        roomUrl: string;
+        callType: 'VIDEO_CALL' | 'PHONE_CALL';
+        createdBy: string;
+        roomId: string;
+    };
 }
 
 interface MessageBubbleProps {
@@ -109,6 +115,64 @@ export default function MessageBubble({
             });
         }
     };
+
+    // Video Call Invitation messages
+    if (message.messageType === 'VIDEO_CALL_INVITATION') {
+        return (
+            <div className={`flex justify-center my-4 ${className}`}>
+                <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 border-2 border-green-200 dark:border-green-800 rounded-xl px-6 py-4 max-w-md shadow-lg">
+                    <div className="text-center">
+                        <div className="text-2xl mb-2">
+                            {message.videoCallData?.callType === 'VIDEO_CALL' ? '📹' : '📞'}
+                        </div>
+                        <p className="text-sm font-medium text-green-700 dark:text-green-300 mb-3">
+                            {message.content}
+                        </p>
+
+                        {message.videoCallData?.roomUrl && (
+                            <button
+                                onClick={() => {
+                                    // Open Daily room directly in a new tab
+                                    window.open(message.videoCallData!.roomUrl, '_blank', 'width=1200,height=800');
+                                }}
+                                className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg mb-2"
+                            >
+                                🚀 Join {message.videoCallData.callType === 'VIDEO_CALL' ? 'Video' : 'Audio'} Call
+                            </button>
+                        )}
+
+                        <p className="text-xs text-green-500 dark:text-green-400">
+                            {formatTime(message.createdAt)}
+                        </p>
+
+                        {message.videoCallData?.roomUrl && (
+                            <details className="mt-3 text-left">
+                                <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">
+                                    Advanced options
+                                </summary>
+                                <div className="mt-2 p-2 bg-white/50 dark:bg-gray-800/50 rounded border">
+                                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">Direct link:</p>
+                                    <input
+                                        type="text"
+                                        value={message.videoCallData.roomUrl}
+                                        readOnly
+                                        className="w-full text-xs p-1 border rounded bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                                        onClick={(e) => (e.target as HTMLInputElement).select()}
+                                    />
+                                    <button
+                                        onClick={() => navigator.clipboard.writeText(message.videoCallData!.roomUrl)}
+                                        className="text-xs bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 px-2 py-1 rounded mt-1 transition-colors"
+                                    >
+                                        📋 Copy Link
+                                    </button>
+                                </div>
+                            </details>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     // System messages
     if (message.senderType === 'SYSTEM') {

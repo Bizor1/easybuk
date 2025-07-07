@@ -105,6 +105,37 @@ export default function BookingVideoCall({
             setRoomUrl(room.url);
             setCallStatus('✅ Room created successfully! Ready to join.');
             console.log('Created booking room:', room);
+
+            // 🚀 AUTOMATICALLY SEND VIDEO CALL INVITATION MESSAGE
+            try {
+                const callTypeDisplay = callType === 'VIDEO_CALL' ? 'Video Call' : 'Audio Call';
+                const invitationMessage = `🎯 ${user?.name || 'Someone'} started a ${callTypeDisplay}!\n\nClick the button below to join instantly:`;
+
+                await fetch('/api/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        bookingId,
+                        content: invitationMessage,
+                        messageType: 'VIDEO_CALL_INVITATION',
+                        videoCallData: {
+                            roomUrl: room.url,
+                            callType: callType,
+                            createdBy: user?.name || 'Someone',
+                            roomId: room.id || room.name
+                        }
+                    })
+                });
+
+                console.log('✅ Video call invitation sent automatically!');
+            } catch (error) {
+                console.error('Failed to send automatic invitation:', error);
+                // Don't fail the whole process if message sending fails
+            }
+
         } catch (error) {
             console.error('Error creating booking room:', error);
             setCallStatus(`❌ Error creating room: ${error instanceof Error ? error.message : 'Unknown error'}`);
