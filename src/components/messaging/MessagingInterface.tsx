@@ -64,32 +64,64 @@ export default function MessagingInterface({
             if (data.success) {
                 console.log('Raw messages from API:', data.messages);
                 setMessages(data.messages.map((msg: any) => {
-                    console.log('Processing message:', msg.id, 'attachments:', msg.attachments);
+                    console.log('🔄 Processing message:', msg.id);
+                    console.log('📎 Raw attachments:', msg.attachments, 'Type:', typeof msg.attachments, 'IsArray:', Array.isArray(msg.attachments));
 
-                    let parsedAttachments = [];
+                    // Initialize with empty array
+                    let parsedAttachments: any[] = [];
+
+                    // Safe attachment parsing with comprehensive error handling
                     if (msg.attachments) {
                         try {
-                            // First parse the JSON string to get the array
-                            const attachmentsArray = JSON.parse(msg.attachments);
-                            console.log('Parsed attachments array:', attachmentsArray);
+                            if (Array.isArray(msg.attachments)) {
+                                // Case 1: attachments is already an array (most common case)
+                                console.log('✅ Attachments is array, length:', msg.attachments.length);
 
-                            // Then parse each attachment if it's a JSON string
-                            parsedAttachments = attachmentsArray.map((att: any) => {
-                                if (typeof att === 'string') {
-                                    try {
-                                        return JSON.parse(att);
-                                    } catch (e) {
-                                        console.warn('Failed to parse attachment string:', att);
-                                        return att;
+                                parsedAttachments = msg.attachments.map((item: any, index: number) => {
+                                    console.log(`📎 Processing attachment ${index}:`, item, 'Type:', typeof item);
+
+                                    if (typeof item === 'string') {
+                                        // Item is a JSON string, parse it
+                                        try {
+                                            const parsed = JSON.parse(item);
+                                            console.log(`✅ Parsed attachment ${index}:`, parsed);
+                                            return parsed;
+                                        } catch (parseError) {
+                                            console.warn(`⚠️ Failed to parse attachment ${index} JSON:`, item, parseError);
+                                            return { fileName: 'Invalid attachment', url: '', isImage: false, cloudinaryId: '' };
+                                        }
+                                    } else if (typeof item === 'object' && item !== null) {
+                                        // Item is already an object
+                                        console.log(`✅ Attachment ${index} is already object:`, item);
+                                        return item;
+                                    } else {
+                                        console.warn(`⚠️ Unexpected attachment ${index} type:`, typeof item, item);
+                                        return { fileName: 'Unknown attachment', url: '', isImage: false, cloudinaryId: '' };
                                     }
+                                });
+                            } else if (typeof msg.attachments === 'string') {
+                                // Case 2: attachments is a JSON string representing an array
+                                console.log('🔄 Attachments is string, attempting to parse...');
+                                const parsed = JSON.parse(msg.attachments);
+
+                                if (Array.isArray(parsed)) {
+                                    parsedAttachments = parsed;
+                                } else {
+                                    parsedAttachments = [parsed]; // Single attachment
                                 }
-                                return att;
-                            });
-                            console.log('Final parsed attachments:', parsedAttachments);
-                        } catch (e) {
-                            console.error('Failed to parse attachments:', e, msg.attachments);
+                                console.log('✅ Parsed attachments from string:', parsedAttachments);
+                            } else {
+                                console.warn('⚠️ Unexpected attachments format:', typeof msg.attachments);
+                                parsedAttachments = [];
+                            }
+                        } catch (error) {
+                            console.error('❌ Critical error processing attachments:', error);
+                            console.error('❌ Raw attachments that caused error:', msg.attachments);
+                            parsedAttachments = [];
                         }
                     }
+
+                    console.log('🏁 Final parsed attachments for message:', msg.id, parsedAttachments);
 
                     return {
                         ...msg,
