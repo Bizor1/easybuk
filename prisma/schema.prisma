@@ -487,7 +487,6 @@ enum MessageType {
   DOCUMENT
   LOCATION
   SYSTEM
-  VIDEO_CALL_INVITATION
 }
 
 enum NotificationType {

@@ -11,6 +11,11 @@ export interface MessageAttachment {
     url: string;
     isImage: boolean;
     cloudinaryId: string;
+    // Video call invitation properties
+    isVideoCallInvitation?: boolean;
+    buttonText?: string;
+    type?: string;
+    name?: string;
 }
 
 export interface Message {
@@ -18,19 +23,13 @@ export interface Message {
     content: string;
     senderId: string;
     senderType: 'CLIENT' | 'PROVIDER' | 'SYSTEM';
-    messageType: 'TEXT' | 'IMAGE' | 'DOCUMENT' | 'SYSTEM' | 'VIDEO_CALL_INVITATION';
+    messageType: 'TEXT' | 'IMAGE' | 'DOCUMENT' | 'SYSTEM';
     attachments?: MessageAttachment[];
     isRead: boolean;
     flagged?: boolean;
     createdAt: string;
     senderName?: string;
     senderImage?: string;
-    videoCallData?: {
-        roomUrl: string;
-        callType: 'VIDEO_CALL' | 'PHONE_CALL';
-        createdBy: string;
-        roomId: string;
-    };
 }
 
 interface MessageBubbleProps {
@@ -116,64 +115,6 @@ export default function MessageBubble({
         }
     };
 
-    // Video Call Invitation messages
-    if (message.messageType === 'VIDEO_CALL_INVITATION') {
-        return (
-            <div className={`flex justify-center my-4 ${className}`}>
-                <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 border-2 border-green-200 dark:border-green-800 rounded-xl px-6 py-4 max-w-md shadow-lg">
-                    <div className="text-center">
-                        <div className="text-2xl mb-2">
-                            {message.videoCallData?.callType === 'VIDEO_CALL' ? '📹' : '📞'}
-                        </div>
-                        <p className="text-sm font-medium text-green-700 dark:text-green-300 mb-3">
-                            {message.content}
-                        </p>
-
-                        {message.videoCallData?.roomUrl && (
-                            <button
-                                onClick={() => {
-                                    // Open Daily room directly in a new tab
-                                    window.open(message.videoCallData!.roomUrl, '_blank', 'width=1200,height=800');
-                                }}
-                                className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg mb-2"
-                            >
-                                🚀 Join {message.videoCallData.callType === 'VIDEO_CALL' ? 'Video' : 'Audio'} Call
-                            </button>
-                        )}
-
-                        <p className="text-xs text-green-500 dark:text-green-400">
-                            {formatTime(message.createdAt)}
-                        </p>
-
-                        {message.videoCallData?.roomUrl && (
-                            <details className="mt-3 text-left">
-                                <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">
-                                    Advanced options
-                                </summary>
-                                <div className="mt-2 p-2 bg-white/50 dark:bg-gray-800/50 rounded border">
-                                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">Direct link:</p>
-                                    <input
-                                        type="text"
-                                        value={message.videoCallData.roomUrl}
-                                        readOnly
-                                        className="w-full text-xs p-1 border rounded bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-                                        onClick={(e) => (e.target as HTMLInputElement).select()}
-                                    />
-                                    <button
-                                        onClick={() => navigator.clipboard.writeText(message.videoCallData!.roomUrl)}
-                                        className="text-xs bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 px-2 py-1 rounded mt-1 transition-colors"
-                                    >
-                                        📋 Copy Link
-                                    </button>
-                                </div>
-                            </details>
-                        )}
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
     // System messages
     if (message.senderType === 'SYSTEM') {
         return (
@@ -255,78 +196,107 @@ export default function MessageBubble({
                                 {message.attachments.map((attachment, index) => (
                                     <div key={index} className="border-t border-white/20 pt-2 first:border-t-0 first:pt-0">
 
-                                        {/* Image Attachments */}
-                                        {attachment.isImage ? (
-                                            <div className="relative group">
-                                                <Image
-                                                    src={attachment.url}
-                                                    alt={attachment.fileName}
-                                                    width={200}
-                                                    height={150}
-                                                    className="rounded-lg object-cover cursor-pointer"
+                                        {/* Video Call Invitation */}
+                                        {attachment.isVideoCallInvitation ? (
+                                            <div className="flex flex-col space-y-2">
+                                                <button
                                                     onClick={() => window.open(attachment.url, '_blank')}
-                                                />
-                                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                                                    <PhotoIcon className="w-8 h-8 text-white" />
-                                                </div>
-                                                <p className="text-xs mt-1 opacity-75">
-                                                    {attachment.fileName} • {formatFileSize(attachment.fileSize)}
+                                                    className={`flex items-center justify-center space-x-2 px-4 py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 active:scale-95 ${attachment.type === 'VIDEO_CALL'
+                                                        ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg'
+                                                        : 'bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white shadow-lg'
+                                                        }`}
+                                                >
+                                                    {attachment.type === 'VIDEO_CALL' ? (
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 002 2v8a2 2 0 002 2z" />
+                                                        </svg>
+                                                    ) : (
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                                        </svg>
+                                                    )}
+                                                    <span>{attachment.buttonText || 'Join Call'}</span>
+                                                </button>
+                                                <p className="text-xs opacity-75 text-center">
+                                                    Click to join the {attachment.type === 'VIDEO_CALL' ? 'video' : 'audio'} call
                                                 </p>
                                             </div>
                                         ) : (
-
-                                            /* Document Attachments */
-                                            <div
-                                                className={`flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors ${isOwn
-                                                    ? 'bg-white/20 hover:bg-white/30'
-                                                    : 'bg-gray-200/50 dark:bg-gray-600/50 hover:bg-gray-300/50 dark:hover:bg-gray-500/50'
-                                                    }`}
-                                                onClick={async () => {
-                                                    if (attachment.url.includes('/api/files/placeholder')) {
-                                                        // Handle placeholder files
-                                                        alert('File temporarily unavailable due to upload issues. Please try again later.');
-                                                    } else {
-                                                        await downloadFile(attachment.url, attachment.fileName);
-                                                    }
-                                                }}
-                                            >
-                                                <div className={`p-2 rounded ${isOwn ? 'bg-white/20' : 'bg-blue-100 dark:bg-blue-900/30'
-                                                    }`}>
-                                                    <DocumentIcon className={`w-5 h-5 ${isOwn ? 'text-white' : 'text-blue-600 dark:text-blue-400'
-                                                        }`} />
-                                                </div>
-
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-sm font-medium truncate">
-                                                        {attachment.fileName}
-                                                        {attachment.url.includes('/api/files/placeholder') && (
-                                                            <span className="ml-2 text-xs bg-yellow-500 text-white px-2 py-1 rounded">
-                                                                Upload Failed
-                                                            </span>
-                                                        )}
-                                                        {downloadingFiles.has(`${attachment.url}-${attachment.fileName}`) && (
-                                                            <span className="ml-2 text-xs bg-blue-500 text-white px-2 py-1 rounded">
-                                                                Downloading...
-                                                            </span>
-                                                        )}
-                                                    </p>
-                                                    <p className="text-xs opacity-75">
-                                                        {formatFileSize(attachment.fileSize)}
-                                                        {attachment.url.includes('/api/files/placeholder') && (
-                                                            <span className="ml-2 text-yellow-600 dark:text-yellow-400">
-                                                                • Retry needed
-                                                            </span>
-                                                        )}
-                                                    </p>
-                                                </div>
-
-                                                {downloadingFiles.has(`${attachment.url}-${attachment.fileName}`) ? (
-                                                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                            <>
+                                                {/* Image Attachments */}
+                                                {attachment.isImage ? (
+                                                    <div className="relative group">
+                                                        <Image
+                                                            src={attachment.url}
+                                                            alt={attachment.fileName}
+                                                            width={200}
+                                                            height={150}
+                                                            className="rounded-lg object-cover cursor-pointer"
+                                                            onClick={() => window.open(attachment.url, '_blank')}
+                                                        />
+                                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                                                            <PhotoIcon className="w-8 h-8 text-white" />
+                                                        </div>
+                                                        <p className="text-xs mt-1 opacity-75">
+                                                            {attachment.fileName} • {formatFileSize(attachment.fileSize)}
+                                                        </p>
+                                                    </div>
                                                 ) : (
-                                                    <ArrowDownTrayIcon className={`w-4 h-4 ${isOwn ? 'text-white/70' : 'text-gray-500 dark:text-gray-400'
-                                                        }`} />
+
+                                                    /* Document Attachments */
+                                                    <div
+                                                        className={`flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors ${isOwn
+                                                            ? 'bg-white/20 hover:bg-white/30'
+                                                            : 'bg-gray-200/50 dark:bg-gray-600/50 hover:bg-gray-300/50 dark:hover:bg-gray-500/50'
+                                                            }`}
+                                                        onClick={async () => {
+                                                            if (attachment.url.includes('/api/files/placeholder')) {
+                                                                // Handle placeholder files
+                                                                alert('File temporarily unavailable due to upload issues. Please try again later.');
+                                                            } else {
+                                                                await downloadFile(attachment.url, attachment.fileName);
+                                                            }
+                                                        }}
+                                                    >
+                                                        <div className={`p-2 rounded ${isOwn ? 'bg-white/20' : 'bg-blue-100 dark:bg-blue-900/30'
+                                                            }`}>
+                                                            <DocumentIcon className={`w-5 h-5 ${isOwn ? 'text-white' : 'text-blue-600 dark:text-blue-400'
+                                                                }`} />
+                                                        </div>
+
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-sm font-medium truncate">
+                                                                {attachment.fileName}
+                                                                {attachment.url.includes('/api/files/placeholder') && (
+                                                                    <span className="ml-2 text-xs bg-yellow-500 text-white px-2 py-1 rounded">
+                                                                        Upload Failed
+                                                                    </span>
+                                                                )}
+                                                                {downloadingFiles.has(`${attachment.url}-${attachment.fileName}`) && (
+                                                                    <span className="ml-2 text-xs bg-blue-500 text-white px-2 py-1 rounded">
+                                                                        Downloading...
+                                                                    </span>
+                                                                )}
+                                                            </p>
+                                                            <p className="text-xs opacity-75">
+                                                                {formatFileSize(attachment.fileSize)}
+                                                                {attachment.url.includes('/api/files/placeholder') && (
+                                                                    <span className="ml-2 text-yellow-600 dark:text-yellow-400">
+                                                                        • Retry needed
+                                                                    </span>
+                                                                )}
+                                                            </p>
+                                                        </div>
+
+                                                        {downloadingFiles.has(`${attachment.url}-${attachment.fileName}`) ? (
+                                                            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                                        ) : (
+                                                            <ArrowDownTrayIcon className={`w-4 h-4 ${isOwn ? 'text-white/70' : 'text-gray-500 dark:text-gray-400'
+                                                                }`} />
+                                                        )}
+                                                    </div>
                                                 )}
-                                            </div>
+                                            </>
                                         )}
                                     </div>
                                 ))}

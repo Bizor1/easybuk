@@ -94,11 +94,7 @@ export default function MessagingInterface({
                     return {
                         ...msg,
                         attachments: parsedAttachments,
-                        createdAt: msg.createdAt,
-                        // Extract video call data from attachments if it's a video call invitation
-                        videoCallData: msg.messageType === 'VIDEO_CALL_INVITATION' && parsedAttachments ?
-                            parsedAttachments.find((att: any) => att.type === 'VIDEO_CALL_DATA')?.data :
-                            undefined
+                        createdAt: msg.createdAt
                     };
                 }));
             }
@@ -203,17 +199,6 @@ export default function MessagingInterface({
         }
     }, [bookingId]);
 
-    // Refresh messages (useful for video call invitations)
-    const refreshMessages = useCallback(() => {
-        fetchMessages();
-    }, [fetchMessages]);
-
-    // Auto-refresh messages every 5 seconds to catch new video call invitations
-    useEffect(() => {
-        const interval = setInterval(refreshMessages, 5000);
-        return () => clearInterval(interval);
-    }, [refreshMessages]);
-
     // Memoized video call availability check to prevent excessive re-renders and console logging
     const canStartVideoCall = useMemo(() => {
         // Allow video calls for confirmed or in-progress bookings
@@ -235,6 +220,12 @@ export default function MessagingInterface({
             setSelectedCallType('VIDEO_CALL');
             setIsVideoCallOpen(true);
         }
+    };
+
+    const handleVideoCallClose = () => {
+        setIsVideoCallOpen(false);
+        // Refresh messages to show any new video call invitations
+        fetchMessages();
     };
 
     const handleStartAudioCall = () => {
@@ -494,7 +485,7 @@ export default function MessagingInterface({
             {isVideoCallOpen && (
                 <BookingVideoCall
                     isOpen={isVideoCallOpen}
-                    onClose={() => setIsVideoCallOpen(false)}
+                    onClose={handleVideoCallClose}
                     bookingId={bookingId}
                     participantName={otherParticipant.name}
                     callType={selectedCallType}
