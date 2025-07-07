@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Image from 'next/image';
 import MessageBubble, { Message, MessageAttachment } from './MessageBubble';
 import MessageInput from './MessageInput';
@@ -199,35 +199,31 @@ export default function MessagingInterface({
         }
     }, [bookingId]);
 
-    // Video call functionality
-    const canStartVideoCall = () => {
-        console.log('🔍 Checking call availability:', {
-            bookingType: booking?.bookingType,
-            status: booking?.status,
-            booking: booking
-        });
-
+    // Memoized video call availability check to prevent excessive re-renders and console logging
+    const canStartVideoCall = useMemo(() => {
         // Allow video calls for confirmed or in-progress bookings
         const hasValidStatus = booking?.status === 'CONFIRMED' || booking?.status === 'IN_PROGRESS';
 
-        console.log('🔍 Call check results:', {
+        // Only log once when the value actually changes, not on every render
+        console.log('🔍 Checking call availability:', {
+            bookingType: booking?.bookingType,
+            status: booking?.status,
             hasValidStatus,
-            bookingStatus: booking?.status,
             finalResult: hasValidStatus
         });
 
         return hasValidStatus;
-    };
+    }, [booking?.status, booking?.bookingType]);
 
     const handleStartVideoCall = () => {
-        if (canStartVideoCall()) {
+        if (canStartVideoCall) {
             setSelectedCallType('VIDEO_CALL');
             setIsVideoCallOpen(true);
         }
     };
 
     const handleStartAudioCall = () => {
-        if (canStartVideoCall()) {
+        if (canStartVideoCall) {
             setSelectedCallType('PHONE_CALL');
             setIsVideoCallOpen(true);
         }
@@ -251,7 +247,7 @@ export default function MessagingInterface({
         scrollToBottom();
     }, [messages]);
 
-    // Polling for new messages (in a real app, you'd use WebSockets)
+    // Optimized polling for new messages with longer interval to reduce refreshing
     useEffect(() => {
         if (!bookingId) return;
 
@@ -259,7 +255,7 @@ export default function MessagingInterface({
             if (!loading && !error) {
                 fetchMessages();
             }
-        }, 15000); // Poll every 15 seconds (even less aggressive)
+        }, 30000); // Increased to 30 seconds to reduce refreshing
 
         return () => clearInterval(interval);
     }, [loading, bookingId, error, fetchMessages]);
@@ -325,7 +321,7 @@ export default function MessagingInterface({
                             {booking?.bookingType === 'VIDEO_CALL' && (
                                 <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
                                     <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 002 2v8a2 2 0 002 2z" />
                                     </svg>
                                     Video Consultation
                                 </span>
@@ -349,21 +345,21 @@ export default function MessagingInterface({
                 </div>
 
                 <div className="flex items-center space-x-3">
-                    {/* Call Buttons */}
-                    {canStartVideoCall() && booking?.bookingType === 'VIDEO_CALL' && (
+                    {/* Call Buttons - Now using memoized value instead of function calls */}
+                    {canStartVideoCall && booking?.bookingType === 'VIDEO_CALL' && (
                         <button
                             onClick={handleStartVideoCall}
                             className="flex items-center space-x-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors shadow-sm"
                         >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 002 2v8a2 2 0 002 2z" />
                             </svg>
                             <span className="hidden sm:inline">Start Video Call</span>
                             <span className="sm:hidden">Video</span>
                         </button>
                     )}
 
-                    {canStartVideoCall() && booking?.bookingType === 'PHONE_CALL' && (
+                    {canStartVideoCall && booking?.bookingType === 'PHONE_CALL' && (
                         <button
                             onClick={handleStartAudioCall}
                             className="flex items-center space-x-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors shadow-sm"
@@ -377,13 +373,13 @@ export default function MessagingInterface({
                     )}
 
                     {/* Default Video Call Button for confirmed bookings without specific type */}
-                    {canStartVideoCall() && !booking?.bookingType && (
+                    {canStartVideoCall && !booking?.bookingType && (
                         <button
                             onClick={handleStartVideoCall}
                             className="flex items-center space-x-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors shadow-sm"
                         >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 002 2v8a2 2 0 002 2z" />
                             </svg>
                             <span className="hidden sm:inline">Start Video Call</span>
                             <span className="sm:hidden">Video</span>
@@ -391,13 +387,13 @@ export default function MessagingInterface({
                     )}
 
                     {/* Default call button for old bookings (fallback) */}
-                    {canStartVideoCall() && booking?.bookingType && !['VIDEO_CALL', 'PHONE_CALL'].includes(booking.bookingType) && (
+                    {canStartVideoCall && booking?.bookingType && !['VIDEO_CALL', 'PHONE_CALL'].includes(booking.bookingType) && (
                         <button
                             onClick={handleStartVideoCall}
                             className="flex items-center space-x-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors shadow-sm"
                         >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 002 2v8a2 2 0 002 2z" />
                             </svg>
                             <span className="hidden sm:inline">Start Call</span>
                             <span className="sm:hidden">Call</span>
