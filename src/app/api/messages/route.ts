@@ -50,21 +50,36 @@ export async function GET(request: NextRequest) {
     }
 
     // Get messages for this booking using raw SQL to avoid foreign key issues
-    const messages = await prisma.$queryRaw`
-      SELECT * FROM "Message" 
-      WHERE "bookingId" = ${bookingId}
-      ORDER BY "createdAt" ASC
-    `;
+    console.log('📨 Fetching messages for booking:', bookingId);
+    let messages;
+    try {
+      messages = await prisma.$queryRaw`
+        SELECT * FROM "Message" 
+        WHERE "bookingId" = ${bookingId}
+        ORDER BY "createdAt" ASC
+      `;
+      console.log('✅ Found', Array.isArray(messages) ? messages.length : 0, 'messages');
+    } catch (fetchError) {
+      console.error('❌ Error fetching messages from database:', fetchError);
+      throw new Error(`Failed to fetch messages: ${fetchError instanceof Error ? fetchError.message : 'Database query failed'}`);
+    }
 
     // Mark messages as read for the current user using raw SQL
-    const currentUserEntityId = isClient ? booking.Client.id : booking.ServiceProvider.id;
-    await prisma.$executeRaw`
-      UPDATE "Message" 
-      SET "isRead" = true, "readAt" = NOW()
-      WHERE "bookingId" = ${bookingId} 
-        AND "receiverId" = ${currentUserEntityId} 
-        AND "isRead" = false
-    `;
+    try {
+      const currentUserEntityId = isClient ? booking.Client.id : booking.ServiceProvider.id;
+      console.log('📖 Marking messages as read for user:', currentUserEntityId);
+      await prisma.$executeRaw`
+        UPDATE "Message" 
+        SET "isRead" = true, "readAt" = NOW()
+        WHERE "bookingId" = ${bookingId} 
+          AND "receiverId" = ${currentUserEntityId} 
+          AND "isRead" = false
+      `;
+      console.log('✅ Messages marked as read');
+    } catch (readError) {
+      console.error('⚠️ Error marking messages as read (non-critical):', readError);
+      // Don't throw here - just log the error since message fetching is more important
+    }
 
     return NextResponse.json({
       success: true,
@@ -182,32 +197,52 @@ export async function POST(request: NextRequest) {
     const flaggedValue = filterResult.violations.length > 0;
     const flagReasonValue = filterResult.violations.length > 0 ? filterResult.violations.join(', ') : null;
 
-    // Handle empty attachments array properly for PostgreSQL
-    const attachmentsArray = attachments.length > 0 ? attachments : null;
+    // Handle attachments array properly for PostgreSQL - convert objects to JSON strings
+    let attachmentsArray = null;
+    if (attachments.length > 0) {
+      try {
+        // Convert each attachment object to a JSON string for storage in String[] field
+        attachmentsArray = attachments.map((attachment: any) => JSON.stringify(attachment));
+        console.log('✅ Attachments processed:', attachmentsArray.length, 'items');
+      } catch (attachmentError) {
+        console.error('❌ Error processing attachments:', attachmentError);
+        console.log('Raw attachments:', attachments);
+        // Continue without attachments rather than failing completely
+        attachmentsArray = null;
+      }
+    }
 
     // Use raw SQL to insert the message to bypass the problematic foreign key constraints
-    if (attachmentsArray) {
-      await prisma.$executeRaw`
-        INSERT INTO "Message" (
-          id, content, "senderId", "senderType", "receiverId", "receiverType", 
-          "bookingId", "messageType", attachments, "isRead", flagged, "flagReason", "createdAt"
-        ) VALUES (
-          ${messageId}, ${filterResult.filteredContent}, ${senderId}, ${senderType}, 
-          ${receiverId}, ${receiverType}, ${bookingId}, ${messageType}::"MessageType", 
-          ${attachmentsArray}, false, ${flaggedValue}, ${flagReasonValue}, NOW()
-        )
-      `;
-    } else {
-      await prisma.$executeRaw`
-        INSERT INTO "Message" (
-          id, content, "senderId", "senderType", "receiverId", "receiverType", 
-          "bookingId", "messageType", "isRead", flagged, "flagReason", "createdAt"
-        ) VALUES (
-          ${messageId}, ${filterResult.filteredContent}, ${senderId}, ${senderType}, 
-          ${receiverId}, ${receiverType}, ${bookingId}, ${messageType}::"MessageType", 
-          false, ${flaggedValue}, ${flagReasonValue}, NOW()
-        )
-      `;
+    try {
+      if (attachmentsArray && attachmentsArray.length > 0) {
+        console.log('💾 Inserting message with attachments...');
+        await prisma.$executeRaw`
+          INSERT INTO "Message" (
+            id, content, "senderId", "senderType", "receiverId", "receiverType", 
+            "bookingId", "messageType", attachments, "isRead", flagged, "flagReason", "createdAt"
+          ) VALUES (
+            ${messageId}, ${filterResult.filteredContent}, ${senderId}, ${senderType}, 
+            ${receiverId}, ${receiverType}, ${bookingId}, ${messageType}::"MessageType", 
+            ${attachmentsArray}, false, ${flaggedValue}, ${flagReasonValue}, NOW()
+          )
+        `;
+      } else {
+        console.log('💾 Inserting message without attachments...');
+        await prisma.$executeRaw`
+          INSERT INTO "Message" (
+            id, content, "senderId", "senderType", "receiverId", "receiverType", 
+            "bookingId", "messageType", "isRead", flagged, "flagReason", "createdAt"
+          ) VALUES (
+            ${messageId}, ${filterResult.filteredContent}, ${senderId}, ${senderType}, 
+            ${receiverId}, ${receiverType}, ${bookingId}, ${messageType}::"MessageType", 
+            false, ${flaggedValue}, ${flagReasonValue}, NOW()
+          )
+        `;
+      }
+      console.log('✅ Message inserted successfully:', messageId);
+    } catch (dbError) {
+      console.error('❌ Database insertion error:', dbError);
+      throw new Error(`Failed to save message: ${dbError instanceof Error ? dbError.message : 'Unknown database error'}`);
     }
 
     // Fetch the created message to return
