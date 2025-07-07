@@ -381,51 +381,54 @@ function ParticipantTile({ participantId }: ParticipantTileProps) {
                 />
             )}
 
-            {/* Placeholder when no video */}
-            {!hasVideoTrack && (
+            {/* Placeholder when no video - using EXACT test page logic */}
+            {videoMediaTrack?.state !== 'playable' && (
                 <div className="absolute inset-0 flex items-center justify-center bg-gray-700">
                     <div className="text-center">
-                        <div className="w-16 h-16 bg-gray-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="w-12 h-12 bg-gray-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                            <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                             </svg>
                         </div>
-                        <p className="text-white text-lg font-medium">{displayName}</p>
-                        <p className="text-gray-400 text-sm mt-1">Camera off</p>
+                        <p className="text-white text-sm">{displayName}</p>
+                        <p className="text-gray-400 text-xs mt-1">
+                            {videoMediaTrack?.state || 'No video'}
+                        </p>
                     </div>
                 </div>
             )}
 
-            {/* Manual audio enable button for remote participants */}
+            {/* Audio control for remote participants - using EXACT test page styling */}
             {!isLocal && hasAudioTrack && !audioPlaying && (
                 <button
                     onClick={playAudioManually}
-                    className="absolute top-4 left-4 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm font-medium transition-colors"
+                    className="absolute top-2 left-2 bg-yellow-600 hover:bg-yellow-700 text-white px-2 py-1 rounded text-xs"
                     title="Click to enable audio"
                 >
                     🔊 Enable Audio
                 </button>
             )}
 
-            {/* Participant name overlay */}
-            <div className="absolute bottom-4 left-4 bg-black bg-opacity-75 text-white px-3 py-1 rounded-md text-sm font-medium">
+            {/* Participant name overlay - using EXACT test page styling */}
+            <div className="absolute bottom-2 left-2 bg-black bg-opacity-75 text-white px-2 py-1 rounded text-xs">
                 {displayName}
+                {isLocal && ' (You)'}
             </div>
 
-            {/* Status indicators */}
-            <div className="absolute top-4 right-4 flex space-x-2">
-                {/* Video status */}
-                <div className={`w-2 h-2 rounded-full ${hasVideoTrack ? 'bg-green-500' : 'bg-red-500'}`}
-                    title={`Video: ${hasVideoTrack ? 'on' : 'off'}`} />
+            {/* Status indicators - using EXACT test page logic */}
+            <div className="absolute top-2 right-2 flex space-x-1">
+                {/* Video indicator */}
+                <div className={`w-3 h-3 rounded-full ${hasVideoTrack && videoMediaTrack?.state === 'playable' ? 'bg-green-500' : 'bg-red-500'
+                    }`} title={`Video: ${videoMediaTrack?.state || 'off'}`} />
 
-                {/* Audio status */}
-                <div className={`w-2 h-2 rounded-full ${hasAudioTrack ? 'bg-blue-500' : 'bg-red-500'}`}
-                    title={`Audio: ${hasAudioTrack ? 'on' : 'off'}`} />
+                {/* Audio indicator */}
+                <div className={`w-3 h-3 rounded-full ${hasAudioTrack && audioMediaTrack?.state === 'playable' ? 'bg-blue-500' : 'bg-red-500'
+                    }`} title={`Audio: ${audioMediaTrack?.state || 'off'}`} />
 
-                {/* Audio playing status for remote participants */}
+                {/* Audio playing indicator for remote participants */}
                 {!isLocal && hasAudioTrack && (
-                    <div className={`w-2 h-2 rounded-full ${audioPlaying ? 'bg-green-400' : 'bg-yellow-500'}`}
-                        title={`Audio playing: ${audioPlaying ? 'yes' : 'click to enable'}`} />
+                    <div className={`w-3 h-3 rounded-full ${audioPlaying ? 'bg-yellow-500' : 'bg-gray-500'
+                        }`} title={`Audio Playing: ${audioPlaying ? 'yes' : 'no'}`} />
                 )}
             </div>
         </div>
