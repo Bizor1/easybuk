@@ -240,15 +240,12 @@ function ParticipantGrid({ participantIds }: ParticipantGridProps) {
     const callObject = useDaily();
     const participants = callObject?.participants();
 
-    // Filter out phantom 'local' participant and get real participants
-    const realParticipantIds = participantIds.filter(id => id !== 'local');
-
-    // Add local participant if exists
+    // Use same logic as test page: include all participants
     const allParticipants = [];
     if (participants?.local) {
         allParticipants.push('local');
     }
-    realParticipantIds.forEach(id => {
+    participantIds.forEach(id => {
         if (id !== 'local') {
             allParticipants.push(id);
         }
@@ -256,7 +253,6 @@ function ParticipantGrid({ participantIds }: ParticipantGridProps) {
 
     console.log('🎬 Participant Grid:', {
         originalParticipantIds: participantIds,
-        realParticipantIds,
         allParticipants,
         localParticipant: participants?.local
     });
@@ -287,7 +283,7 @@ function ParticipantTile({ participantId }: ParticipantTileProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const audioRef = useRef<HTMLAudioElement>(null);
     const userName = useParticipantProperty(participantId, 'user_name');
-    const isLocal = useParticipantProperty(participantId, 'local');
+    const isLocal = participantId === 'local'; // Use same logic as test page
     const videoMediaTrack = useMediaTrack(participantId, 'video');
     const audioMediaTrack = useMediaTrack(participantId, 'audio');
     const [audioPlaying, setAudioPlaying] = useState(false);
