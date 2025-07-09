@@ -121,8 +121,10 @@ export async function GET(request: NextRequest) {
                 },
                 _sum: { totalAmount: true }
             }),
-            // Profile views (mock for now - would need tracking implementation)
-            Promise.resolve(Math.floor(Math.random() * 500) + 100),
+            // Profile views - Using tracking helper
+            import('@/lib/tracking').then(({ getProfileViewAnalytics }) =>
+                getProfileViewAnalytics(provider.id, startDate).then(data => data.totalViews)
+            ),
             // Average rating
             prisma.review.aggregate({
                 where: {
@@ -132,11 +134,13 @@ export async function GET(request: NextRequest) {
                 _avg: { overallRating: true },
                 _count: true
             }),
-            // Response time stats (mock - would need message tracking)
-            Promise.resolve({
-                avgResponseTime: Math.floor(Math.random() * 60) + 5, // 5-65 minutes
-                responseRate: Math.floor(Math.random() * 20) + 80 // 80-100%
-            }),
+            // Response time stats - Using tracking helper
+            import('@/lib/tracking').then(({ getResponseTimeAnalytics }) =>
+                getResponseTimeAnalytics(provider.id, startDate).then(data => ({
+                    avgResponseTime: data.avgResponseTimeMinutes,
+                    responseRate: data.responseRate
+                }))
+            ),
             // Repeat clients
             prisma.booking.findMany({
                 where: {

@@ -222,24 +222,22 @@ model ProviderWallet {
 }
 
 model Report {
-  id                                 String          @id
-  reportedBy                         String
-  reportedByType                     String
-  reportedUser                       String
-  reportedUserType                   String
-  type                               ReportType
-  status                             ReportStatus    @default(PENDING)
-  reason                             String
-  description                        String?
-  evidence                           String[]
-  action                             String?
-  resolvedBy                         String?
-  resolvedAt                         DateTime?
-  createdAt                          DateTime        @default(now())
-  Client_Report_reportedUserToClient Client          @relation("Report_reportedUserToClient", fields: [reportedUser], references: [id], map: "Report_clientReported_fkey")
-  Client_Report_reportedByToClient   Client          @relation("Report_reportedByToClient", fields: [reportedBy], references: [id], map: "Report_clientReporter_fkey")
-  ServiceProvider_Report_reportedUserToClient ServiceProvider @relation("Report_reportedUserToServiceProvider", fields: [reportedUser], references: [id], map: "Report_providerReported_fkey")
-  ServiceProvider_Report_reportedByToClient   ServiceProvider @relation("Report_reportedByToServiceProvider", fields: [reportedBy], references: [id], map: "Report_providerReporter_fkey")
+  id                           String       @id
+  reportedUserId               String
+  reportedByUserId             String
+  type                         ReportType
+  reason                       String
+  description                  String?
+  evidence                     String[]
+  status                       ReportStatus @default(PENDING)
+  reviewedBy                   String?
+  reviewedAt                   DateTime?
+  actionTaken                  String?
+  createdAt                    DateTime     @default(now())
+  Client_Report_reportedUserToClient   Client       @relation("Report_reportedUserToClient", fields: [reportedUserId], references: [id], map: "Report_client_reported_fkey")
+  Client_Report_reportedByToClient     Client       @relation("Report_reportedByToClient", fields: [reportedByUserId], references: [id], map: "Report_client_reporter_fkey")
+  ServiceProvider_Report_reportedUserToClient ServiceProvider @relation("Report_reportedUserToServiceProvider", fields: [reportedUserId], references: [id], map: "Report_provider_reported_fkey")
+  ServiceProvider_Report_reportedByToClient   ServiceProvider @relation("Report_reportedByToServiceProvider", fields: [reportedByUserId], references: [id], map: "Report_provider_reporter_fkey")
 }
 
 model Review {
@@ -349,6 +347,8 @@ model ServiceProvider {
   Service                            Service[]
   Transaction                        Transaction[]
   UserProviderProfile                UserProviderProfile?
+  ProfileView                        ProfileView[]
+  MessageResponseTime                MessageResponseTime[]
 }
 
 model Transaction {
@@ -435,6 +435,40 @@ model VerificationToken {
   User       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([identifier, token])
+}
+
+model ProfileView {
+  id                String          @id @default(cuid())
+  providerId        String
+  viewerId          String?
+  viewerType        String?         // 'CLIENT', 'PROVIDER', 'GUEST'
+  ipAddress         String?
+  userAgent         String?
+  referrer          String?
+  source            String?         // 'search', 'direct', 'booking', etc.
+  duration          Int?            // Time spent on profile in seconds
+  createdAt         DateTime        @default(now())
+  ServiceProvider   ServiceProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId, createdAt])
+  @@index([viewerId, createdAt])
+}
+
+model MessageResponseTime {
+  id              String          @id @default(cuid())
+  providerId      String
+  bookingId       String?
+  clientId        String?
+  messageSentAt   DateTime
+  responseAt      DateTime?
+  responseTimeMs  Int?            // Response time in milliseconds
+  isFirstResponse Boolean         @default(false)
+  messageType     String?         // 'BOOKING_REQUEST', 'GENERAL', etc.
+  createdAt       DateTime        @default(now())
+  ServiceProvider ServiceProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId, messageSentAt])
+  @@index([bookingId])
 }
 
 enum BookingStatus {
@@ -578,9 +612,9 @@ enum UserRole {
 }
 
 enum UserStatus {
+  PENDING_VERIFICATION
   ACTIVE
   SUSPENDED
-  PENDING_VERIFICATION
   BANNED
   UNDER_REVIEW
 }
@@ -588,7 +622,8 @@ enum UserStatus {
 enum VerificationStatus {
   PENDING
   IN_REVIEW
-  VERIFIED
+  APPROVED
   REJECTED
+  VERIFIED
   EXPIRED
 }
