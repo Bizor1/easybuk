@@ -78,6 +78,7 @@ export async function GET(request: NextRequest) {
                         name: true,
                         businessName: true,
                         city: true,
+                        image: true,
                         rating: true,
                         verificationStatus: true,
                         responseTime: true,
@@ -85,7 +86,8 @@ export async function GET(request: NextRequest) {
                             select: {
                                 User: {
                                     select: {
-                                        name: true
+                                        name: true,
+                                        image: true
                                     }
                                 }
                             }
@@ -118,7 +120,8 @@ export async function GET(request: NextRequest) {
                     select: {
                         User: {
                             select: {
-                                name: true
+                                name: true,
+                                image: true
                             }
                         }
                     }
@@ -143,14 +146,14 @@ export async function GET(request: NextRequest) {
                 'Professional Provider';
 
             return {
-                id: parseInt(service.id.replace(/\D/g, '')) || Math.floor(Math.random() * 10000),
-                realServiceId: service.id,  // Keep real service ID
-                realProviderId: provider?.id || null,  // Keep real provider ID
+                id: `S${service.id.replace(/\D/g, '')}` || `S${Math.floor(Math.random() * 10000)}`,
+                realProviderId: service.ServiceProvider?.id,
                 type: 'service' as const,
                 name: service.name,
                 title: service.description || service.name,
                 category: service.category.toLowerCase().replace('_services', '').replace('_', ''),
-                image: service.images?.[0] || 'https://res.cloudinary.com/duhfv8nqy/image/upload/v1733764031/default-avatar_cugq40.png',
+                image: service.images?.[0] || service.ServiceProvider?.UserProviderProfile?.User?.image || service.ServiceProvider?.image || 'https://res.cloudinary.com/duhfv8nqy/image/upload/v1733764031/default-avatar_cugq40.png',
+                profileImage: service.ServiceProvider?.UserProviderProfile?.User?.image || service.ServiceProvider?.image || 'https://res.cloudinary.com/duhfv8nqy/image/upload/v1733764031/default-avatar_cugq40.png',
                 rating: Math.round(rating * 10) / 10,
                 reviews: 0,
                 price: `GH₵${service.basePrice}`,
@@ -194,7 +197,8 @@ export async function GET(request: NextRequest) {
                 name: providerName,
                 title: provider.bio?.substring(0, 50) + '...' || `${provider.category.replace('_', ' ')} Professional`,
                 category: provider.category.toLowerCase().replace('_services', '').replace('_', ''),
-                image: 'https://res.cloudinary.com/duhfv8nqy/image/upload/v1733764031/default-avatar_cugq40.png',
+                image: provider.UserProviderProfile?.User?.image || provider.image || 'https://res.cloudinary.com/duhfv8nqy/image/upload/v1733764031/default-avatar_cugq40.png',
+                profileImage: provider.UserProviderProfile?.User?.image || provider.image || 'https://res.cloudinary.com/duhfv8nqy/image/upload/v1733764031/default-avatar_cugq40.png',
                 rating: Math.round(rating * 10) / 10,
                 reviews: 0,
                 price: `GH₵${Math.round(averagePrice)}`,

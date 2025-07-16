@@ -146,6 +146,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
             id: provider.id,
             name: user?.name || provider.name || '',
             specialty: provider.category || 'Professional Service',
+            profileImage: user?.image || provider.image || 'https://res.cloudinary.com/duhfv8nqy/image/upload/v1733764031/default-avatar_cugq40.png',
+            profilePicture: user?.image || provider.image || 'https://res.cloudinary.com/duhfv8nqy/image/upload/v1733764031/default-avatar_cugq40.png',
             image: user?.image || provider.image || 'https://res.cloudinary.com/duhfv8nqy/image/upload/v1733764031/default-avatar_cugq40.png',
             rating: Math.round(avgRating * 10) / 10,
             reviews: provider.Review.length,
