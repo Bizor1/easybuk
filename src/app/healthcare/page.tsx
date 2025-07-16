@@ -345,9 +345,11 @@ export default function Healthcare() {
                                                     <h3 className="text-xl font-bold text-gray-800">{professional.name}</h3>
                                                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${professional.availability === 'Available now'
                                                         ? 'bg-green-100 text-green-800'
-                                                        : 'bg-yellow-100 text-yellow-800'
+                                                        : professional.availability === 'Available today'
+                                                            ? 'bg-blue-100 text-blue-800'
+                                                            : 'bg-yellow-100 text-yellow-800'
                                                         }`}>
-                                                        {professional.availability}
+                                                        {typeof professional.availability === 'string' ? professional.availability : 'Available for booking'}
                                                     </span>
                                                 </div>
 

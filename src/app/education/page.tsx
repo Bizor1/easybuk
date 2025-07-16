@@ -439,7 +439,7 @@ export default function Education() {
                                                             ? 'bg-blue-100 text-blue-800'
                                                             : 'bg-yellow-100 text-yellow-800'
                                                         }`}>
-                                                        {professional.availability}
+                                                        {typeof professional.availability === 'string' ? professional.availability : 'Available for booking'}
                                                     </span>
                                                 </div>
 

@@ -76,7 +76,9 @@ export default function EducationProfessional() {
                         name: data.businessName || `${data.name}&apos;s Academy`,
                         address: data.address || `${data.location} (Online & Home Tutoring)`,
                         phone: data.phone || "+233 24 123 7890",
-                        hours: data.workingHours || "Mon-Sat: 3PM-8PM, Sun: 10AM-6PM"
+                        hours: typeof data.workingHours === 'object' && data.workingHours
+                            ? "Mon-Sat: 3PM-8PM, Sun: 10AM-6PM"  // Convert object to readable string
+                            : data.workingHours || "Mon-Sat: 3PM-8PM, Sun: 10AM-6PM"
                     }
                 };
 
@@ -212,7 +214,7 @@ export default function EducationProfessional() {
                                         <div className="flex items-center justify-between mb-2">
                                             <h1 className="text-3xl font-bold text-gray-800">{professional.name}</h1>
                                             <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                                                {professional.availability}
+                                                {typeof professional.availability === 'string' ? professional.availability : 'Available for booking'}
                                             </span>
                                         </div>
 

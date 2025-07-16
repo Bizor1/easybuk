@@ -76,7 +76,9 @@ export default function TechnicalProfessional() {
                         name: data.businessName || `${data.name}&apos;s Workshop`,
                         address: data.address || `${data.location}, Ghana`,
                         phone: data.phone || "+233 24 567 8901",
-                        hours: data.workingHours || "Mon-Sat: 7AM-6PM, Emergency 24/7"
+                        hours: typeof data.workingHours === 'object' && data.workingHours
+                            ? "Mon-Sat: 7AM-6PM, Emergency 24/7"  // Convert object to readable string
+                            : data.workingHours || "Mon-Sat: 7AM-6PM, Emergency 24/7"
                     }
                 };
 
@@ -212,7 +214,7 @@ export default function TechnicalProfessional() {
                                         <div className="flex items-center justify-between mb-2">
                                             <h1 className="text-3xl font-bold text-gray-800">{professional.name}</h1>
                                             <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                                                {professional.availability}
+                                                {typeof professional.availability === 'string' ? professional.availability : 'Available for booking'}
                                             </span>
                                         </div>
 

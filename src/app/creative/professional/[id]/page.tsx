@@ -164,7 +164,7 @@ export default function CreativeProfessional() {
                                         <div className="flex items-center justify-between mb-2">
                                             <h1 className="text-3xl font-bold text-gray-800">{professional.name}</h1>
                                             <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                                                {professional.availability}
+                                                {typeof professional.availability === 'string' ? professional.availability : 'Available for booking'}
                                             </span>
                                         </div>
 
