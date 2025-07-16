@@ -1,10 +1,36 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import BookingForm from '@/components/BookingForm';
+
+// Interface for professional data
+interface Professional {
+    id: number;
+    name: string;
+    specialty: string;
+    image: string;
+    rating: number;
+    reviews: number;
+    experience: string;
+    location: string;
+    consultation: string;
+    availability: string;
+    verified: boolean;
+    languages: string[];
+    services: string[];
+    about: string;
+    education: string[];
+    certifications: string[];
+    firm: {
+        name: string;
+        address: string;
+        phone: string;
+        hours: string;
+    };
+}
 
 export default function ProfessionalServicesProfessional() {
     const params = useParams();
@@ -12,51 +38,82 @@ export default function ProfessionalServicesProfessional() {
     const [selectedTime, setSelectedTime] = useState('');
     const [consultationType, setConsultationType] = useState('virtual');
     const [showBookingForm, setShowBookingForm] = useState(false);
+    const [professional, setProfessional] = useState<Professional | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    // Mock professional data - in real app, fetch based on params.id
-    const professional = {
-        id: 1,
-        name: "Barrister Akosua Darko",
-        specialty: "Corporate Lawyer",
-        image: "https://images.unsplash.com/photo-1594824724159-9d0d18e2d4d1?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-        rating: 4.9,
-        reviews: 87,
-        experience: "15 years",
-        location: "Ridge, Accra",
-        consultation: "GH₵200",
-        availability: "Available this week",
-        verified: true,
-        languages: ["English", "French"],
-        services: ["Corporate Law", "Contract Drafting", "Legal Consultation", "Business Registration", "Mergers & Acquisitions", "Compliance"],
-        about: "Experienced corporate lawyer with 15 years of practice in commercial law, business formation, and legal compliance. I help businesses navigate complex legal challenges and ensure regulatory compliance.",
-        education: ["LLB - University of Ghana Law Faculty", "BL - Ghana School of Law", "Master of Laws (LLM) - Harvard Law School", "Corporate Law Specialization"],
-        certifications: ["Ghana Bar Association Member", "Corporate Law Specialist", "International Business Law Certified", "Arbitration & Mediation Certified"],
-        firm: {
-            name: "Darko & Associates Legal",
-            address: "Independence Avenue, Ridge, Accra",
-            phone: "+233 30 276 5432",
-            hours: "Mon-Fri: 8AM-6PM, Sat: 10AM-2PM"
-        }
-    };
+    // Fetch professional data from API
+    useEffect(() => {
+        const fetchProfessional = async () => {
+            if (!params.id) return;
+
+            try {
+                setLoading(true);
+                const response = await fetch(`/api/providers/${params.id}`);
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch professional data');
+                }
+
+                const data = await response.json();
+
+                // Transform API data to match UI format
+                const transformedData: Professional = {
+                    id: data.id,
+                    name: data.name,
+                    specialty: data.category || 'Professional Service Provider',
+                    image: data.profileImage || "https://images.unsplash.com/photo-1594824724159-9d0d18e2d4d1?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
+                    rating: data.rating || 4.5,
+                    reviews: data.totalReviews || 0,
+                    experience: `${data.experience || 10} years`,
+                    location: data.location || "Ghana",
+                    consultation: `GH₵${data.hourlyRate || 200}`,
+                    availability: data.isAvailable ? "Available this week" : "Contact for availability",
+                    verified: data.isVerified || false,
+                    languages: data.languages || ["English"],
+                    services: data.services?.map((s: any) => s.name || s.title).slice(0, 6) || ["Professional Consultation"],
+                    about: data.bio || data.description || "Experienced professional providing expert consultation and services with a focus on quality and client satisfaction.",
+                    education: data.education || ["Professional Degree", "Advanced Certification"],
+                    certifications: data.certifications || ["Licensed Professional"],
+                    firm: {
+                        name: data.businessName || `${data.name}&apos;s Practice`,
+                        address: data.address || `${data.location}, Ghana`,
+                        phone: data.phone || "+233 30 276 5432",
+                        hours: data.workingHours || "Mon-Fri: 8AM-6PM, Sat: 10AM-2PM"
+                    }
+                };
+
+                setProfessional(transformedData);
+                setError(null);
+            } catch (err) {
+                console.error('Error fetching professional data:', err);
+                setError('Failed to load professional data');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchProfessional();
+    }, [params.id]);
 
     const reviews = [
         {
             name: "Mr. Joseph Osei",
             rating: 5,
             date: "2 weeks ago",
-            comment: "Excellent legal advice for our company merger. Very professional and thorough in explaining complex legal matters."
+            comment: "Excellent professional advice. Very thorough in explaining complex matters."
         },
         {
             name: "Sarah Business Ltd",
             rating: 5,
             date: "1 month ago",
-            comment: "Barrister Darko helped us with contract negotiations. Her expertise saved us from potential legal issues. Highly recommend!"
+            comment: "Great expertise and professional service. Clear communication and reasonable fees."
         },
         {
             name: "Kwame Enterprises",
             rating: 4,
             date: "2 months ago",
-            comment: "Professional service for business registration and compliance. Clear communication and reasonable fees."
+            comment: "Professional service with attention to detail. Completed work on time as promised."
         }
     ];
 
@@ -65,7 +122,7 @@ export default function ProfessionalServicesProfessional() {
     ];
 
     // Service data for BookingForm
-    const serviceData = {
+    const serviceData = professional ? {
         id: professional.id.toString(),
         title: `${professional.specialty} Consultation`,
         description: professional.about,
@@ -80,7 +137,7 @@ export default function ProfessionalServicesProfessional() {
             name: professional.name,
             rating: professional.rating
         }
-    };
+    } : null;
 
     const handleBookingComplete = (bookingData: any) => {
         console.log('Booking completed:', bookingData);
@@ -91,6 +148,33 @@ export default function ProfessionalServicesProfessional() {
     const handleCloseBooking = () => {
         setShowBookingForm(false);
     };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                    <p className="mt-4 text-gray-600">Loading professional profile...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error || !professional) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50 flex items-center justify-center">
+                <div className="text-center">
+                    <p className="text-red-600 mb-4">{error || 'Professional not found'}</p>
+                    <Link
+                        href="/professional-services"
+                        className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                    >
+                        Back to Professional Services
+                    </Link>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50">
@@ -312,7 +396,7 @@ export default function ProfessionalServicesProfessional() {
             </section>
 
             {/* Booking Form Modal */}
-            {showBookingForm && (
+            {showBookingForm && serviceData && (
                 <BookingForm
                     service={serviceData}
                     category="professional"

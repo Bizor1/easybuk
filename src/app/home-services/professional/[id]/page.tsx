@@ -1,67 +1,124 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import BookingForm from '../../../../components/BookingForm';
 
+// Interface for professional data
+interface Professional {
+    id: number;
+    name: string;
+    specialty: string;
+    image: string;
+    rating: number;
+    reviews: number;
+    experience: string;
+    location: string;
+    consultation: string;
+    availability: string;
+    verified: boolean;
+    languages: string[];
+    services: string[];
+    about: string;
+    education: string[];
+    certifications: string[];
+    business: {
+        name: string;
+        address: string;
+        phone: string;
+        hours: string;
+    };
+}
+
 export default function HomeServicesProfessional() {
     const params = useParams();
     const [showBookingModal, setShowBookingModal] = useState(false);
+    const [professional, setProfessional] = useState<Professional | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    // Mock professional data - in real app, fetch based on params.id
-    const professional = {
-        id: 1,
-        name: "Grace Mensah",
-        specialty: "Professional Cleaner",
-        image: "https://images.unsplash.com/photo-1494790108755-2616b612b282?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-        rating: 4.9,
-        reviews: 127,
-        experience: "8 years",
-        location: "East Legon, Accra",
-        consultation: "GH₵50",
-        availability: "Available today",
-        verified: true,
-        languages: ["English", "Twi", "Ga"],
-        services: ["Deep Cleaning", "Regular Cleaning", "Move-in/out Cleaning", "Office Cleaning", "Carpet Cleaning", "Window Cleaning"],
-        about: "Professional cleaning specialist with 8 years of experience providing top-quality cleaning services for homes and offices. I use eco-friendly products and ensure complete customer satisfaction.",
-        education: ["Hospitality Management Certificate - Hotel Training Institute", "Professional Cleaning Techniques Course", "Health & Safety Certification"],
-        certifications: ["Certified Professional Cleaner", "Eco-Friendly Cleaning Specialist", "Sanitization Expert", "Customer Service Excellence"],
-        business: {
-            name: "Grace's Premium Cleaning",
-            address: "East Legon, Accra (Mobile Service)",
-            phone: "+233 24 345 6789",
-            hours: "Mon-Sat: 6AM-8PM, Sunday: 8AM-6PM"
-        }
-    };
+    // Fetch professional data from API
+    useEffect(() => {
+        const fetchProfessional = async () => {
+            if (!params.id) return;
+
+            try {
+                setLoading(true);
+                const response = await fetch(`/api/providers/${params.id}`);
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch professional data');
+                }
+
+                const data = await response.json();
+
+                // Transform API data to match UI format
+                const transformedData: Professional = {
+                    id: data.id,
+                    name: data.name,
+                    specialty: data.category || 'Home Service Professional',
+                    image: data.profileImage || "https://images.unsplash.com/photo-1494790108755-2616b612b282?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
+                    rating: data.rating || 4.5,
+                    reviews: data.totalReviews || 0,
+                    experience: `${data.experience || 6} years`,
+                    location: data.location || "Ghana",
+                    consultation: `GH₵${data.hourlyRate || 50}`,
+                    availability: data.isAvailable ? "Available today" : "Contact for availability",
+                    verified: data.isVerified || false,
+                    languages: data.languages || ["English"],
+                    services: data.services?.map((s: any) => s.name || s.title).slice(0, 6) || ["Home Services"],
+                    about: data.bio || data.description || "Professional home service provider with years of experience delivering quality services.",
+                    education: data.education || ["Professional Training", "Service Certification"],
+                    certifications: data.certifications || ["Licensed Professional"],
+                    business: {
+                        name: data.businessName || `${data.name}&apos;s Services`,
+                        address: data.address || `${data.location} (Mobile Service)`,
+                        phone: data.phone || "+233 24 345 6789",
+                        hours: data.workingHours || "Mon-Sat: 6AM-8PM, Sunday: 8AM-6PM"
+                    }
+                };
+
+                setProfessional(transformedData);
+                setError(null);
+            } catch (err) {
+                console.error('Error fetching professional data:', err);
+                setError('Failed to load professional data');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchProfessional();
+    }, [params.id]);
 
     const reviews = [
         {
             name: "Mrs. Adwoa Osei",
             rating: 5,
             date: "3 days ago",
-            comment: "Grace did an amazing job cleaning our house! Very thorough and professional. The house sparkled after she was done."
+            comment: "Amazing service! Very thorough and professional. Highly recommend!"
         },
         {
             name: "Mr. Kwame Asante",
             rating: 5,
             date: "1 week ago",
-            comment: "Excellent service! Grace is punctual, reliable, and pays attention to every detail. Highly recommend her services."
+            comment: "Excellent service! Punctual, reliable, and pays attention to every detail."
         },
         {
             name: "Sandra Agyei",
             rating: 4,
             date: "2 weeks ago",
-            comment: "Great cleaning service. Grace is very friendly and professional. Will definitely book her again."
+            comment: "Great service provider. Very friendly and professional. Will definitely book again."
         }
     ];
 
     // Service data for the booking modal
-    const serviceData = {
+    const serviceData = professional ? {
         id: professional.id.toString(),
         title: professional.specialty,
-        description: `Home cleaning services with ${professional.name}`,
+        description: `Home services with ${professional.name}`,
         basePrice: parseFloat(professional.consultation.replace('GH₵', '')),
         currency: 'GHS',
         pricingType: 'fixed' as const,
@@ -74,7 +131,34 @@ export default function HomeServicesProfessional() {
             avatar: professional.image,
             rating: professional.rating
         }
-    };
+    } : null;
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+                    <p className="mt-4 text-gray-600">Loading professional profile...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error || !professional) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 flex items-center justify-center">
+                <div className="text-center">
+                    <p className="text-red-600 mb-4">{error || 'Professional not found'}</p>
+                    <Link
+                        href="/home-services"
+                        className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                        Back to Home Services
+                    </Link>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50">
@@ -294,7 +378,7 @@ export default function HomeServicesProfessional() {
             </section>
 
             {/* Booking Modal */}
-            {showBookingModal && (
+            {showBookingModal && serviceData && (
                 <BookingForm
                     service={serviceData}
                     onClose={() => setShowBookingModal(false)}

@@ -13,22 +13,22 @@ export default function HealthcareProfessional() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Fetch real provider data
+    // Fetch real provider data by service ID
     useEffect(() => {
         const fetchProviderData = async () => {
             try {
                 setLoading(true);
-                const response = await fetch(`/api/providers/${params.id}`);
+                const response = await fetch(`/api/professionals/${params.id}`);
 
                 if (!response.ok) {
-                    throw new Error('Provider not found');
+                    throw new Error('Professional not found');
                 }
 
                 const data = await response.json();
                 setProfessional(data);
             } catch (error) {
-                console.error('Error fetching provider:', error);
-                setError('Failed to load provider profile');
+                console.error('Error fetching professional:', error);
+                setError('Failed to load professional profile');
             } finally {
                 setLoading(false);
             }
@@ -49,7 +49,7 @@ export default function HealthcareProfessional() {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        providerId: params.id,
+                        serviceId: params.id,
                         source: 'healthcare_profile'
                     })
                 });
@@ -80,8 +80,8 @@ export default function HealthcareProfessional() {
             <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center">
                 <div className="text-center">
                     <div className="text-6xl mb-4">😞</div>
-                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Provider Not Found</h2>
-                    <p className="text-gray-600 mb-4">{error || 'The provider profile you are looking for does not exist.'}</p>
+                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Professional Not Found</h2>
+                    <p className="text-gray-600 mb-4">{error || 'The professional profile you are looking for does not exist.'}</p>
                     <Link href="/healthcare" className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
                         Back to Healthcare Services
                     </Link>
@@ -93,15 +93,16 @@ export default function HealthcareProfessional() {
     // Use real reviews data from API
     const reviews = professional.reviewsData || [];
 
-    // Service data for the booking modal
+    // Service data for the booking modal - using the primary service context
+    const primaryService = professional.primaryService || professional.services?.[0];
     const serviceData = {
-        id: professional.id,
-        title: professional.businessName || professional.name,
-        description: professional.services?.[0]?.description || `Healthcare consultation with ${professional.name}`,
-        basePrice: professional.services?.[0]?.basePrice || 80,
+        id: primaryService?.id || professional.id,
+        title: primaryService?.name || professional.businessName || professional.name,
+        description: primaryService?.description || `Healthcare consultation with ${professional.name}`,
+        basePrice: primaryService?.basePrice || 80,
         currency: 'GHS',
-        pricingType: 'fixed' as const,
-        duration: professional.services?.[0]?.duration || 30,
+        pricingType: (primaryService?.pricingType || 'FIXED').toLowerCase() as 'fixed' | 'hourly' | 'package',
+        duration: primaryService?.duration || 30,
         durationUnit: 'minutes',
         supportedBookingTypes: ['IN_PERSON', 'VIDEO_CALL'] as ('IN_PERSON' | 'VIDEO_CALL' | 'REMOTE' | 'PHONE_CALL')[],
         provider: {
@@ -168,7 +169,7 @@ export default function HealthcareProfessional() {
                                             </span>
                                         </div>
 
-                                        <p className="text-xl text-blue-600 font-medium mb-2">{professional.businessName || professional.categorySpecialty}</p>
+                                        <p className="text-xl text-blue-600 font-medium mb-2">{professional.categorySpecialty || professional.businessName}</p>
                                         <p className="text-gray-600 mb-4">📍 {professional.location} • {professional.yearsOfExperience || 'Experienced'} {professional.yearsOfExperience ? 'years' : ''} experience</p>
 
                                         <div className="flex items-center space-x-6 mb-4">
@@ -178,7 +179,7 @@ export default function HealthcareProfessional() {
                                                 <span className="text-gray-500 ml-1">({professional.totalReviews || 0} reviews)</span>
                                             </div>
                                             <div className="text-3xl font-bold text-blue-600">
-                                                GH₵{professional.services?.[0]?.basePrice || 80}
+                                                GH₵{professional.primaryService?.basePrice || professional.services?.[0]?.basePrice || 80}
                                             </div>
                                         </div>
 
@@ -210,7 +211,10 @@ export default function HealthcareProfessional() {
                                         <h3 className="text-xl font-bold text-gray-800 mb-3">Services Offered</h3>
                                         <div className="grid grid-cols-2 gap-3">
                                             {professional.services.map((service: any, index: number) => (
-                                                <div key={index} className="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg text-center">
+                                                <div key={index} className={`px-4 py-2 rounded-lg text-center ${service.id === professional.primaryService?.id
+                                                    ? 'bg-blue-600 text-white font-medium'
+                                                    : 'bg-blue-50 text-blue-700'
+                                                    }`}>
                                                     {service.name || service.title}
                                                 </div>
                                             ))}
@@ -318,7 +322,7 @@ export default function HealthcareProfessional() {
                                     <div className="flex justify-between items-center">
                                         <span className="text-gray-700">Consultation Fee</span>
                                         <span className="text-2xl font-bold text-blue-600">
-                                            GH₵{professional.services?.[0]?.basePrice || 80}
+                                            GH₵{professional.primaryService?.basePrice || professional.services?.[0]?.basePrice || 80}
                                         </span>
                                     </div>
                                 </div>
@@ -332,14 +336,14 @@ export default function HealthcareProfessional() {
                                 </button>
 
                                 {/* Clinic Info */}
-                                {professional.businessAddress && (
+                                {(professional.businessAddress || professional.contact?.address) && (
                                     <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                                        <h4 className="font-bold text-gray-800 mb-2">🏥 {professional.businessName || 'Healthcare Clinic'}</h4>
-                                        <p className="text-gray-600 text-sm mb-1">📍 {professional.businessAddress}</p>
-                                        {professional.phone && (
-                                            <p className="text-gray-600 text-sm mb-1">📞 {professional.phone}</p>
+                                        <h4 className="font-bold text-gray-800 mb-2">🏥 {professional.businessName || professional.contact?.businessName || 'Healthcare Clinic'}</h4>
+                                        <p className="text-gray-600 text-sm mb-1">📍 {professional.businessAddress || professional.contact?.address}</p>
+                                        {(professional.phone || professional.contact?.phone) && (
+                                            <p className="text-gray-600 text-sm mb-1">📞 {professional.phone || professional.contact?.phone}</p>
                                         )}
-                                        <p className="text-gray-600 text-sm">🕒 Available by appointment</p>
+                                        <p className="text-gray-600 text-sm">🕒 {professional.contact?.hours || 'Available by appointment'}</p>
                                     </div>
                                 )}
                             </div>

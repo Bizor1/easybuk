@@ -4,10 +4,31 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 
+// Interface for professional service provider data
+interface ProfessionalServiceProvider {
+    id: number;
+    name: string;
+    specialty: string;
+    image: string;
+    rating: number;
+    reviews: number;
+    experience: string;
+    location: string;
+    consultation: string;
+    availability: string;
+    verified: boolean;
+    specializations: string[];
+    services: string[];
+    description: string;
+}
+
 export default function ProfessionalServices() {
     const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
     const [searchLocation, setSearchLocation] = useState('');
     const [searchService, setSearchService] = useState('');
+    const [professionalServiceProviders, setProfessionalServiceProviders] = useState<ProfessionalServiceProvider[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     // Banner carousel data with professional service themes
     const bannerAds = useMemo(() => [
@@ -41,73 +62,49 @@ export default function ProfessionalServices() {
         }
     ], []);
 
-    // Professional service providers data
-    const professionalServiceProviders = [
-        {
-            id: 1,
-            name: "Barrister Kwame Adjei",
-            specialty: "Legal Advisory",
-            image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
-            rating: 4.9,
-            reviews: 142,
-            experience: "18 years",
-            location: "Accra",
-            consultation: "GH₵300",
-            availability: "Available this week",
-            verified: true,
-            specializations: ["Corporate Law", "Contract Law", "Real Estate"],
-            services: ["Legal Consultation", "Contract Review", "Business Registration", "Court Representation"],
-            description: "Senior barrister specializing in corporate and commercial law with extensive court experience."
-        },
-        {
-            id: 2,
-            name: "Sarah Osei, CPA",
-            specialty: "Accounting & Finance",
-            image: "https://images.unsplash.com/photo-1494790108755-2616b612b282?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
-            rating: 4.8,
-            reviews: 186,
-            experience: "12 years",
-            location: "Kumasi",
-            consultation: "GH₵250",
-            availability: "Available today",
-            verified: true,
-            specializations: ["Tax Planning", "Financial Audit", "Bookkeeping"],
-            services: ["Tax Preparation", "Financial Planning", "Audit Services", "Bookkeeping"],
-            description: "Certified Public Accountant providing comprehensive financial services for businesses and individuals."
-        },
-        {
-            id: 3,
-            name: "Dr. Emmanuel Boateng",
-            specialty: "Business Consulting",
-            image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
-            rating: 4.9,
-            reviews: 97,
-            experience: "15 years",
-            location: "Accra",
-            consultation: "GH₵400",
-            availability: "Available tomorrow",
-            verified: true,
-            specializations: ["Strategy Development", "Market Analysis", "Digital Transformation"],
-            services: ["Business Strategy", "Market Research", "Operations Improvement", "Digital Solutions"],
-            description: "Business consultant with PhD in Management helping companies achieve sustainable growth."
-        },
-        {
-            id: 4,
-            name: "Grace Mensah, SHRM",
-            specialty: "Human Resources",
-            image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
-            rating: 4.7,
-            reviews: 128,
-            experience: "10 years",
-            location: "Tema",
-            consultation: "GH₵200",
-            availability: "Available now",
-            verified: true,
-            specializations: ["Talent Acquisition", "Performance Management", "HR Policy"],
-            services: ["Recruitment", "Employee Training", "HR Audits", "Policy Development"],
-            description: "SHRM certified HR professional specializing in talent management and organizational development."
-        }
-    ];
+    // Fetch professional service providers from API
+    useEffect(() => {
+        const fetchProfessionalServiceProviders = async () => {
+            try {
+                setLoading(true);
+                const response = await fetch('/api/explore?category=professional&limit=50');
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch professional service providers');
+                }
+
+                const data = await response.json();
+
+                // Transform API data to match UI format
+                const transformedData: ProfessionalServiceProvider[] = data.map((provider: any) => ({
+                    id: provider.id,
+                    name: provider.name,
+                    specialty: provider.category || 'Professional Services',
+                    image: provider.profileImage || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
+                    rating: provider.rating || 4.5,
+                    reviews: provider.totalReviews || 0,
+                    experience: `${provider.experience || 10} years`,
+                    location: provider.location || "Ghana",
+                    consultation: `GH₵${provider.hourlyRate || 250}`,
+                    availability: provider.isAvailable ? "Available now" : "Contact for availability",
+                    verified: provider.isVerified || false,
+                    specializations: provider.specializations || provider.skills?.slice(0, 3) || ["Professional Service"],
+                    services: provider.services?.map((s: any) => s.name || s.title).slice(0, 4) || ["Consultation"],
+                    description: provider.bio || provider.description || "Professional service provider"
+                }));
+
+                setProfessionalServiceProviders(transformedData);
+                setError(null);
+            } catch (err) {
+                console.error('Error fetching professional service providers:', err);
+                setError('Failed to load professional service providers');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchProfessionalServiceProviders();
+    }, []);
 
     // Auto-advance carousel
     useEffect(() => {
@@ -294,95 +291,116 @@ export default function ProfessionalServices() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {professionalServiceProviders.map((professional) => (
-                            <div key={professional.id} className="bg-white rounded-2xl shadow-lg border-l-4 border-purple-500 hover:shadow-xl transition-all duration-300 overflow-hidden">
-                                <div className="p-6">
-                                    <div className="flex items-start space-x-4">
-                                        <div className="relative">
-                                            <Image
-                                                src={professional.image}
-                                                alt={professional.name}
-                                                width={80}
-                                                height={80}
-                                                className="rounded-full object-cover"
-                                            />
-                                            {professional.verified && (
-                                                <div className="absolute -bottom-1 -right-1 bg-purple-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">
-                                                    ✓
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="flex-1">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <h3 className="text-xl font-bold text-gray-800">{professional.name}</h3>
-                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${professional.availability === 'Available now'
-                                                    ? 'bg-green-100 text-green-800'
-                                                    : professional.availability === 'Available today'
-                                                        ? 'bg-blue-100 text-blue-800'
-                                                        : 'bg-yellow-100 text-yellow-800'
-                                                    }`}>
-                                                    {professional.availability}
-                                                </span>
+                    {loading ? (
+                        <div className="text-center py-12">
+                            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                            <p className="mt-4 text-gray-600">Loading professional service providers...</p>
+                        </div>
+                    ) : error ? (
+                        <div className="text-center py-12">
+                            <p className="text-red-600 mb-4">{error}</p>
+                            <button
+                                onClick={() => window.location.reload()}
+                                className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                            >
+                                Try Again
+                            </button>
+                        </div>
+                    ) : professionalServiceProviders.length === 0 ? (
+                        <div className="text-center py-12">
+                            <p className="text-gray-600">No professional service providers found.</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            {professionalServiceProviders.map((professional) => (
+                                <div key={professional.id} className="bg-white rounded-2xl shadow-lg border-l-4 border-purple-500 hover:shadow-xl transition-all duration-300 overflow-hidden">
+                                    <div className="p-6">
+                                        <div className="flex items-start space-x-4">
+                                            <div className="relative">
+                                                <Image
+                                                    src={professional.image}
+                                                    alt={professional.name}
+                                                    width={80}
+                                                    height={80}
+                                                    className="rounded-full object-cover"
+                                                />
+                                                {professional.verified && (
+                                                    <div className="absolute -bottom-1 -right-1 bg-purple-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">
+                                                        ✓
+                                                    </div>
+                                                )}
                                             </div>
 
-                                            <p className="text-purple-600 font-medium mb-1">{professional.specialty}</p>
-                                            <p className="text-gray-500 text-sm mb-2">📍 {professional.location} • {professional.experience} experience</p>
-
-                                            <div className="flex items-center space-x-4 mb-3">
-                                                <div className="flex items-center">
-                                                    <span className="text-yellow-400 mr-1">⭐</span>
-                                                    <span className="font-bold text-gray-800">{professional.rating}</span>
-                                                    <span className="text-gray-500 text-sm ml-1">({professional.reviews} reviews)</span>
+                                            <div className="flex-1">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <h3 className="text-xl font-bold text-gray-800">{professional.name}</h3>
+                                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${professional.availability === 'Available now'
+                                                        ? 'bg-green-100 text-green-800'
+                                                        : professional.availability === 'Available today'
+                                                            ? 'bg-blue-100 text-blue-800'
+                                                            : 'bg-yellow-100 text-yellow-800'
+                                                        }`}>
+                                                        {professional.availability}
+                                                    </span>
                                                 </div>
-                                                <div className="text-2xl font-bold text-purple-600">{professional.consultation}</div>
-                                            </div>
 
-                                            <div className="mb-4">
-                                                <p className="text-sm text-gray-600 mb-1">Specializations:</p>
-                                                <div className="flex flex-wrap gap-1">
-                                                    {professional.specializations.map((spec, index) => (
-                                                        <span key={index} className="bg-purple-50 text-purple-700 px-2 py-1 rounded text-xs">
-                                                            {spec}
-                                                        </span>
-                                                    ))}
+                                                <p className="text-purple-600 font-medium mb-1">{professional.specialty}</p>
+                                                <p className="text-gray-500 text-sm mb-2">📍 {professional.location} • {professional.experience} experience</p>
+
+                                                <div className="flex items-center space-x-4 mb-3">
+                                                    <div className="flex items-center">
+                                                        <span className="text-yellow-400 mr-1">⭐</span>
+                                                        <span className="font-bold text-gray-800">{professional.rating}</span>
+                                                        <span className="text-gray-500 text-sm ml-1">({professional.reviews} reviews)</span>
+                                                    </div>
+                                                    <div className="text-2xl font-bold text-purple-600">{professional.consultation}</div>
                                                 </div>
-                                            </div>
 
-                                            <div className="mb-4">
-                                                <p className="text-sm text-gray-600 mb-1">Services:</p>
-                                                <div className="flex flex-wrap gap-1">
-                                                    {professional.services.slice(0, 3).map((service, index) => (
-                                                        <span key={index} className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
-                                                            {service}
-                                                        </span>
-                                                    ))}
-                                                    {professional.services.length > 3 && (
-                                                        <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
-                                                            +{professional.services.length - 3} more
-                                                        </span>
-                                                    )}
+                                                <div className="mb-4">
+                                                    <p className="text-sm text-gray-600 mb-1">Specializations:</p>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {professional.specializations.map((spec: string, index: number) => (
+                                                            <span key={index} className="bg-purple-50 text-purple-700 px-2 py-1 rounded text-xs">
+                                                                {spec}
+                                                            </span>
+                                                        ))}
+                                                    </div>
                                                 </div>
-                                            </div>
 
-                                            <div className="flex space-x-3">
-                                                <Link
-                                                    href={`/professional-services/professional/${professional.id}`}
-                                                    className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-2 px-4 rounded-lg font-bold text-center hover:from-purple-700 hover:to-indigo-700 transition-all duration-300"
-                                                >
-                                                    View Profile & Book
-                                                </Link>
-                                                <button className="border border-purple-600 text-purple-600 py-2 px-4 rounded-lg font-bold hover:bg-purple-50 transition-colors">
-                                                    📞 Call
-                                                </button>
+                                                <div className="mb-4">
+                                                    <p className="text-sm text-gray-600 mb-1">Services:</p>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {professional.services.slice(0, 3).map((service: string, index: number) => (
+                                                            <span key={index} className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
+                                                                {service}
+                                                            </span>
+                                                        ))}
+                                                        {professional.services.length > 3 && (
+                                                            <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
+                                                                +{professional.services.length - 3} more
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex space-x-3">
+                                                    <Link
+                                                        href={`/professional-services/professional/${professional.id}`}
+                                                        className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-2 px-4 rounded-lg font-bold text-center hover:from-purple-700 hover:to-indigo-700 transition-all duration-300"
+                                                    >
+                                                        View Profile & Book
+                                                    </Link>
+                                                    <button className="border border-purple-600 text-purple-600 py-2 px-4 rounded-lg font-bold hover:bg-purple-50 transition-colors">
+                                                        📞 Call
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    )}
 
                     <div className="text-center mt-12">
                         <button className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-8 py-3 rounded-lg font-bold transition-colors">

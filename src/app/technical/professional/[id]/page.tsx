@@ -1,64 +1,121 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import BookingForm from '../../../../components/BookingForm';
 
+// Interface for professional data
+interface Professional {
+    id: number;
+    name: string;
+    specialty: string;
+    image: string;
+    rating: number;
+    reviews: number;
+    experience: string;
+    location: string;
+    consultation: string;
+    availability: string;
+    verified: boolean;
+    languages: string[];
+    services: string[];
+    about: string;
+    education: string[];
+    certifications: string[];
+    workshop: {
+        name: string;
+        address: string;
+        phone: string;
+        hours: string;
+    };
+}
+
 export default function TechnicalProfessional() {
     const params = useParams();
     const [showBookingModal, setShowBookingModal] = useState(false);
+    const [professional, setProfessional] = useState<Professional | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    // Mock professional data - in real app, fetch based on params.id
-    const professional = {
-        id: 1,
-        name: "Kwame Boateng",
-        specialty: "Auto Mechanic",
-        image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-        rating: 4.8,
-        reviews: 142,
-        experience: "12 years",
-        location: "Accra",
-        consultation: "GH₵60",
-        availability: "Available today",
-        verified: true,
-        languages: ["English", "Twi"],
-        services: ["Engine Repair", "Brake Service", "Oil Change", "AC Repair", "Diagnostics", "Transmission"],
-        about: "Expert automotive technician with over 12 years of experience in vehicle repair and maintenance. Specializes in all makes and models with factory-level diagnostic equipment and genuine parts.",
-        education: ["Automotive Technology Diploma - Takoradi Technical Institute", "ASE Certified Master Technician", "Advanced Engine Diagnostics Certification"],
-        certifications: ["ASE Master Technician", "Bosch Automotive Service Certified", "AC Recovery & Recycling Certified", "Brake Service Specialist"],
-        workshop: {
-            name: "Boateng Auto Repair",
-            address: "456 Spintex Road, East Legon, Accra",
-            phone: "+233 24 567 8901",
-            hours: "Mon-Sat: 7AM-6PM, Emergency 24/7"
-        }
-    };
+    // Fetch professional data from API
+    useEffect(() => {
+        const fetchProfessional = async () => {
+            if (!params.id) return;
+
+            try {
+                setLoading(true);
+                const response = await fetch(`/api/providers/${params.id}`);
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch professional data');
+                }
+
+                const data = await response.json();
+
+                // Transform API data to match UI format
+                const transformedData: Professional = {
+                    id: data.id,
+                    name: data.name,
+                    specialty: data.category || 'Technical Professional',
+                    image: data.profileImage || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
+                    rating: data.rating || 4.5,
+                    reviews: data.totalReviews || 0,
+                    experience: `${data.experience || 8} years`,
+                    location: data.location || "Ghana",
+                    consultation: `GH₵${data.hourlyRate || 60}`,
+                    availability: data.isAvailable ? "Available today" : "Contact for availability",
+                    verified: data.isVerified || false,
+                    languages: data.languages || ["English"],
+                    services: data.services?.map((s: any) => s.name || s.title).slice(0, 6) || ["Technical Services"],
+                    about: data.bio || data.description || "Experienced technical professional providing quality services and solutions.",
+                    education: data.education || ["Technical Training", "Professional Certification"],
+                    certifications: data.certifications || ["Licensed Professional"],
+                    workshop: {
+                        name: data.businessName || `${data.name}&apos;s Workshop`,
+                        address: data.address || `${data.location}, Ghana`,
+                        phone: data.phone || "+233 24 567 8901",
+                        hours: data.workingHours || "Mon-Sat: 7AM-6PM, Emergency 24/7"
+                    }
+                };
+
+                setProfessional(transformedData);
+                setError(null);
+            } catch (err) {
+                console.error('Error fetching professional data:', err);
+                setError('Failed to load professional data');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchProfessional();
+    }, [params.id]);
 
     const reviews = [
         {
             name: "Kwaku Mensah",
             rating: 5,
             date: "1 week ago",
-            comment: "Fixed my car's engine problem quickly and at a fair price. Very professional and explained everything clearly."
+            comment: "Excellent service! Fixed the problem quickly and at a fair price. Very professional."
         },
         {
             name: "Sarah Adjei",
             rating: 5,
             date: "2 weeks ago",
-            comment: "Excellent service! My brakes were fixed perfectly and the workshop is very clean and well-equipped."
+            comment: "Great work and attention to detail. The workshop is well-equipped and clean."
         },
         {
             name: "John Asante",
             rating: 4,
             date: "1 month ago",
-            comment: "Good work on my transmission repair. Honest pricing and completed on time as promised."
+            comment: "Good technical skills and honest pricing. Completed work on time as promised."
         }
     ];
 
     // Service data for the booking modal
-    const serviceData = {
+    const serviceData = professional ? {
         id: professional.id.toString(),
         title: professional.specialty,
         description: `Technical services with ${professional.name}`,
@@ -74,7 +131,34 @@ export default function TechnicalProfessional() {
             avatar: professional.image,
             rating: professional.rating
         }
-    };
+    } : null;
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-orange-50 via-gray-50 to-red-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600"></div>
+                    <p className="mt-4 text-gray-600">Loading professional profile...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error || !professional) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-orange-50 via-gray-50 to-red-50 flex items-center justify-center">
+                <div className="text-center">
+                    <p className="text-red-600 mb-4">{error || 'Professional not found'}</p>
+                    <Link
+                        href="/technical"
+                        className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 transition-colors"
+                    >
+                        Back to Technical Services
+                    </Link>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-orange-50 via-gray-50 to-red-50">
@@ -313,7 +397,7 @@ export default function TechnicalProfessional() {
             </section>
 
             {/* Booking Modal */}
-            {showBookingModal && (
+            {showBookingModal && serviceData && (
                 <BookingForm
                     service={serviceData}
                     onClose={() => setShowBookingModal(false)}

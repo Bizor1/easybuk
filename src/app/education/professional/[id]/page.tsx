@@ -1,67 +1,124 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import BookingForm from '../../../../components/BookingForm';
 
+// Interface for professional data
+interface Professional {
+    id: number;
+    name: string;
+    specialty: string;
+    image: string;
+    rating: number;
+    reviews: number;
+    experience: string;
+    location: string;
+    consultation: string;
+    availability: string;
+    verified: boolean;
+    languages: string[];
+    services: string[];
+    about: string;
+    education: string[];
+    certifications: string[];
+    academy: {
+        name: string;
+        address: string;
+        phone: string;
+        hours: string;
+    };
+}
+
 export default function EducationProfessional() {
     const params = useParams();
     const [showBookingModal, setShowBookingModal] = useState(false);
+    const [professional, setProfessional] = useState<Professional | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    // Mock professional data - in real app, fetch based on params.id
-    const professional = {
-        id: 1,
-        name: "Prof. Samuel Asante",
-        specialty: "Mathematics Tutor",
-        image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-        rating: 4.9,
-        reviews: 134,
-        experience: "10 years",
-        location: "Accra",
-        consultation: "GH₵40",
-        availability: "Available today",
-        verified: true,
-        languages: ["English", "Twi"],
-        services: ["WASSCE Math", "University Math", "IB Mathematics", "Private Tutoring", "Group Classes", "Exam Preparation"],
-        about: "Experienced mathematics educator with 10 years of teaching experience at secondary and tertiary levels. I specialize in making complex mathematical concepts easy to understand through practical examples and interactive learning.",
-        education: ["BSc Mathematics - University of Ghana", "MPhil Mathematics Education - UCC", "Teaching Certificate - UEW", "Advanced Calculus Specialization"],
-        certifications: ["Licensed Professional Teacher", "IB Mathematics Certified", "WASSCE Examiner", "Online Teaching Specialist"],
-        academy: {
-            name: "Asante Math Academy",
-            address: "Osu, Accra (Online & Home Tutoring)",
-            phone: "+233 24 123 7890",
-            hours: "Mon-Sat: 3PM-8PM, Sun: 10AM-6PM"
-        }
-    };
+    // Fetch professional data from API
+    useEffect(() => {
+        const fetchProfessional = async () => {
+            if (!params.id) return;
+
+            try {
+                setLoading(true);
+                const response = await fetch(`/api/providers/${params.id}`);
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch professional data');
+                }
+
+                const data = await response.json();
+
+                // Transform API data to match UI format
+                const transformedData: Professional = {
+                    id: data.id,
+                    name: data.name,
+                    specialty: data.category || 'Education Professional',
+                    image: data.profileImage || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
+                    rating: data.rating || 4.5,
+                    reviews: data.totalReviews || 0,
+                    experience: `${data.experience || 5} years`,
+                    location: data.location || "Ghana",
+                    consultation: `GH₵${data.hourlyRate || 40}`,
+                    availability: data.isAvailable ? "Available today" : "Contact for availability",
+                    verified: data.isVerified || false,
+                    languages: data.languages || ["English"],
+                    services: data.services?.map((s: any) => s.name || s.title).slice(0, 6) || ["Tutoring"],
+                    about: data.bio || data.description || "Experienced education professional dedicated to helping students achieve their academic goals.",
+                    education: data.education || ["Bachelor's Degree", "Teaching Qualification"],
+                    certifications: data.certifications || ["Licensed Professional Teacher"],
+                    academy: {
+                        name: data.businessName || `${data.name}&apos;s Academy`,
+                        address: data.address || `${data.location} (Online & Home Tutoring)`,
+                        phone: data.phone || "+233 24 123 7890",
+                        hours: data.workingHours || "Mon-Sat: 3PM-8PM, Sun: 10AM-6PM"
+                    }
+                };
+
+                setProfessional(transformedData);
+                setError(null);
+            } catch (err) {
+                console.error('Error fetching professional data:', err);
+                setError('Failed to load professional data');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchProfessional();
+    }, [params.id]);
 
     const reviews = [
         {
             name: "Akosua Mensah",
             rating: 5,
             date: "1 week ago",
-            comment: "Prof. Asante helped my daughter improve her math grades from C to A in just 3 months! Excellent teacher with great patience."
+            comment: "Excellent teacher with great patience. Really helped improve grades!"
         },
         {
             name: "Mr. Kwame Osei",
             rating: 5,
             date: "2 weeks ago",
-            comment: "Amazing tutor! My son was struggling with calculus but Prof. Asante made it so easy to understand. Highly recommend!"
+            comment: "Amazing tutor! Made complex topics easy to understand. Highly recommend!"
         },
         {
             name: "Mary Adjei",
             rating: 4,
             date: "1 month ago",
-            comment: "Good teacher with effective teaching methods. Helped me prepare well for my WASSCE mathematics exam."
+            comment: "Good teacher with effective teaching methods. Helped me prepare well for my exams."
         }
     ];
 
     // Service data for the booking modal
-    const serviceData = {
+    const serviceData = professional ? {
         id: professional.id.toString(),
         title: professional.specialty,
-        description: `Mathematics tutoring with ${professional.name}`,
+        description: `Education services with ${professional.name}`,
         basePrice: parseFloat(professional.consultation.replace('GH₵', '')),
         currency: 'GHS',
         pricingType: 'fixed' as const,
@@ -74,7 +131,34 @@ export default function EducationProfessional() {
             avatar: professional.image,
             rating: professional.rating
         }
-    };
+    } : null;
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-blue-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                    <p className="mt-4 text-gray-600">Loading professional profile...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error || !professional) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-blue-50 flex items-center justify-center">
+                <div className="text-center">
+                    <p className="text-red-600 mb-4">{error || 'Professional not found'}</p>
+                    <Link
+                        href="/education"
+                        className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+                    >
+                        Back to Education
+                    </Link>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-blue-50">
@@ -266,8 +350,6 @@ export default function EducationProfessional() {
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Select Date</label>
                                     <input
                                         type="date"
-                                        value={showBookingModal ? serviceData.provider.rating : ''}
-                                        onChange={(e) => { }}
                                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                                     />
                                 </div>
@@ -275,8 +357,11 @@ export default function EducationProfessional() {
                                 {/* Time Selection */}
                                 <div className="mb-6">
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Available Times</label>
-                                    <div className="grid grid-cols-1 gap-2">
-                                        {showBookingModal ? serviceData.provider.rating : ''}
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <button className="p-2 bg-indigo-50 text-indigo-700 rounded text-sm">9:00 AM</button>
+                                        <button className="p-2 bg-indigo-50 text-indigo-700 rounded text-sm">11:00 AM</button>
+                                        <button className="p-2 bg-indigo-50 text-indigo-700 rounded text-sm">2:00 PM</button>
+                                        <button className="p-2 bg-indigo-50 text-indigo-700 rounded text-sm">4:00 PM</button>
                                     </div>
                                 </div>
 
@@ -291,8 +376,8 @@ export default function EducationProfessional() {
 
                                 {/* Book Button */}
                                 <button
-                                    disabled={!showBookingModal}
-                                    className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white py-4 rounded-lg font-bold text-lg hover:from-indigo-700 hover:to-blue-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    onClick={() => setShowBookingModal(true)}
+                                    className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white py-4 rounded-lg font-bold text-lg hover:from-indigo-700 hover:to-blue-700 transition-all duration-300"
                                 >
                                     💳 Book & Pay Now
                                 </button>
@@ -310,7 +395,7 @@ export default function EducationProfessional() {
                 </div>
             </section>
 
-            {showBookingModal && (
+            {showBookingModal && serviceData && (
                 <BookingForm
                     service={serviceData}
                     onClose={() => setShowBookingModal(false)}
