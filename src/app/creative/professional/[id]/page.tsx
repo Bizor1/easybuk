@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
@@ -10,53 +10,89 @@ export default function CreativeProfessional() {
     const [selectedDate, setSelectedDate] = useState('');
     const [selectedTime, setSelectedTime] = useState('');
     const [projectType, setProjectType] = useState('digital');
+    const [professional, setProfessional] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    // Mock professional data - in real app, fetch based on params.id
-    const professional = {
-        id: 1,
-        name: "Kofi Designs",
-        specialty: "Brand Identity Designer",
-        image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-        rating: 4.9,
-        reviews: 167,
-        experience: "7 years",
-        location: "Accra",
-        consultation: "GH₵150",
-        availability: "Available now",
-        verified: true,
-        languages: ["English", "Twi"],
-        services: ["Logo Design", "Brand Identity", "Print Design", "Digital Graphics", "UI/UX Design", "Packaging Design"],
-        about: "Creative brand designer with 7 years of experience helping businesses build strong visual identities. I specialize in creating memorable logos, brand guidelines, and marketing materials that tell your story effectively.",
-        education: ["BA Graphic Design - KNUST", "Digital Marketing Certificate", "Adobe Certified Expert", "Branding & Identity Specialization"],
-        certifications: ["Adobe Creative Suite Expert", "Brand Strategy Certified", "Digital Design Professional", "Print Production Specialist"],
-        studio: {
-            name: "Kofi Creative Studio",
-            address: "Osu, Accra (Remote & Studio Sessions)",
-            phone: "+233 24 987 6543",
-            hours: "Mon-Fri: 9AM-6PM, Weekends by appointment"
-        }
-    };
+    // Fetch real provider data
+    useEffect(() => {
+        const fetchProviderData = async () => {
+            try {
+                setLoading(true);
+                const response = await fetch(`/api/providers/${params.id}`);
 
-    const reviews = [
-        {
-            name: "Sarah Business Ltd",
-            rating: 5,
-            date: "1 week ago",
-            comment: "Kofi created an amazing brand identity for our company! Professional work and great communication throughout the process."
-        },
-        {
-            name: "Mr. Joseph Osei",
-            rating: 5,
-            date: "2 weeks ago",
-            comment: "Excellent designer! Our new logo perfectly captures what our business is about. Very creative and professional."
-        },
-        {
-            name: "Akosua Enterprise",
-            rating: 4,
-            date: "1 month ago",
-            comment: "Great work on our packaging design. Kofi understood our vision and delivered beyond expectations."
+                if (!response.ok) {
+                    throw new Error('Provider not found');
+                }
+
+                const data = await response.json();
+                setProfessional(data);
+            } catch (error) {
+                console.error('Error fetching provider:', error);
+                setError('Failed to load provider profile');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (params.id) {
+            fetchProviderData();
         }
-    ];
+    }, [params.id]);
+
+    // Track profile view
+    useEffect(() => {
+        const trackProfileView = async () => {
+            if (!params.id) return;
+
+            try {
+                await fetch('/api/provider/track-view', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        providerId: params.id,
+                        source: 'creative_profile'
+                    })
+                });
+            } catch (error) {
+                // Fail silently - tracking is not critical
+                console.log('Profile view tracking failed');
+            }
+        };
+
+        trackProfileView();
+    }, [params.id]);
+
+    // Loading state
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-rose-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-pink-500 mx-auto"></div>
+                    <p className="mt-4 text-lg text-gray-600">Loading provider profile...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Error state
+    if (error || !professional) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-rose-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="text-6xl mb-4">😞</div>
+                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Provider Not Found</h2>
+                    <p className="text-gray-600 mb-4">{error || 'The provider profile you are looking for does not exist.'}</p>
+                    <Link href="/creative" className="bg-pink-600 text-white px-6 py-3 rounded-lg hover:bg-pink-700 transition-colors">
+                        Back to Creative Services
+                    </Link>
+                </div>
+            </div>
+        );
+    }
+
+    // Use real reviews data from API
+    const reviews = professional.reviewsData || [];
 
     const availableSlots = [
         "9:00 AM", "11:00 AM", "1:00 PM", "3:00 PM", "5:00 PM"
@@ -132,7 +168,7 @@ export default function CreativeProfessional() {
 
                                         <div className="flex items-center space-x-2 mb-4">
                                             <span className="text-sm text-gray-600">Languages:</span>
-                                            {professional.languages.map((lang, index) => (
+                                            {professional.languages.map((lang: any, index: any) => (
                                                 <span key={index} className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm">
                                                     {lang}
                                                 </span>
@@ -154,7 +190,7 @@ export default function CreativeProfessional() {
                                 <div className="mb-6">
                                     <h3 className="text-xl font-bold text-gray-800 mb-3">🎨 Creative Services</h3>
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                        {professional.services.map((service, index) => (
+                                        {professional.services.map((service: any, index: any) => (
                                             <div key={index} className="bg-pink-50 text-pink-700 px-4 py-2 rounded-lg text-center">
                                                 {service}
                                             </div>
@@ -172,15 +208,29 @@ export default function CreativeProfessional() {
                                 <div className="mb-6">
                                     <h3 className="text-xl font-bold text-gray-800 mb-3">🖼️ Portfolio Preview</h3>
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                        {[1, 2, 3, 4].map((item) => (
-                                            <div key={item} className="aspect-square bg-gradient-to-br from-pink-100 to-rose-100 rounded-lg flex items-center justify-center">
-                                                <span className="text-pink-600 text-2xl">🎨</span>
-                                            </div>
-                                        ))}
+                                        {professional.portfolio && professional.portfolio.length > 0 ? (
+                                            professional.portfolio.slice(0, 4).map((item: any, index: any) => (
+                                                <div key={index} className="aspect-square bg-gradient-to-br from-pink-100 to-rose-100 rounded-lg overflow-hidden">
+                                                    <img
+                                                        src={item.image}
+                                                        alt={item.title}
+                                                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                                                    />
+                                                </div>
+                                            ))
+                                        ) : (
+                                            [1, 2, 3, 4].map((item) => (
+                                                <div key={item} className="aspect-square bg-gradient-to-br from-pink-100 to-rose-100 rounded-lg flex items-center justify-center">
+                                                    <span className="text-pink-600 text-2xl">🎨</span>
+                                                </div>
+                                            ))
+                                        )}
                                     </div>
-                                    <button className="mt-3 text-pink-600 hover:text-pink-700 font-medium text-sm">
-                                        View Full Portfolio →
-                                    </button>
+                                    {professional.portfolio && professional.portfolio.length > 4 && (
+                                        <button className="mt-3 text-pink-600 hover:text-pink-700 font-medium text-sm">
+                                            View Full Portfolio ({professional.portfolio.length} items) →
+                                        </button>
+                                    )}
                                 </div>
 
                                 {/* Education & Certifications */}
@@ -188,7 +238,7 @@ export default function CreativeProfessional() {
                                     <div>
                                         <h3 className="text-lg font-bold text-gray-800 mb-3">🎓 Education & Training</h3>
                                         <ul className="space-y-2">
-                                            {professional.education.map((edu, index) => (
+                                            {professional.education.map((edu: any, index: any) => (
                                                 <li key={index} className="text-gray-600 flex items-start">
                                                     <span className="w-2 h-2 bg-pink-500 rounded-full mr-3 mt-2 flex-shrink-0"></span>
                                                     {edu}
@@ -199,7 +249,7 @@ export default function CreativeProfessional() {
                                     <div>
                                         <h3 className="text-lg font-bold text-gray-800 mb-3">🏆 Certifications</h3>
                                         <ul className="space-y-2">
-                                            {professional.certifications.map((cert, index) => (
+                                            {professional.certifications.map((cert: any, index: any) => (
                                                 <li key={index} className="text-gray-600 flex items-start">
                                                     <span className="w-2 h-2 bg-rose-500 rounded-full mr-3 mt-2 flex-shrink-0"></span>
                                                     {cert}
@@ -214,7 +264,7 @@ export default function CreativeProfessional() {
                             <div className="bg-white rounded-2xl shadow-lg p-8">
                                 <h3 className="text-2xl font-bold text-gray-800 mb-6">Client Reviews</h3>
                                 <div className="space-y-6">
-                                    {reviews.map((review, index) => (
+                                    {reviews.map((review: any, index: any) => (
                                         <div key={index} className="border-b border-gray-200 pb-6 last:border-b-0">
                                             <div className="flex items-start justify-between mb-2">
                                                 <div>
@@ -310,10 +360,10 @@ export default function CreativeProfessional() {
 
                                 {/* Studio Info */}
                                 <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                                    <h4 className="font-bold text-gray-800 mb-2">🎨 {professional.studio.name}</h4>
-                                    <p className="text-gray-600 text-sm mb-1">📍 {professional.studio.address}</p>
-                                    <p className="text-gray-600 text-sm mb-1">📞 {professional.studio.phone}</p>
-                                    <p className="text-gray-600 text-sm">🕒 {professional.studio.hours}</p>
+                                    <h4 className="font-bold text-gray-800 mb-2">🎨 {professional.contact.businessName}</h4>
+                                    <p className="text-gray-600 text-sm mb-1">📍 {professional.contact.address}</p>
+                                    <p className="text-gray-600 text-sm mb-1">📞 {professional.contact.phone}</p>
+                                    <p className="text-gray-600 text-sm">🕒 {professional.contact.hours}</p>
                                 </div>
                             </div>
                         </div>

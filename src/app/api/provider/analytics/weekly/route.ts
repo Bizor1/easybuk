@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
             }
 
             // Fetch data for this period
-            const [bookingCount, revenueData, profileViews] = await Promise.all([
+            const [bookingCount, revenueData, profileViews, avgRating] = await Promise.all([
                 prisma.booking.count({
                     where: {
                         providerId: provider.id,
@@ -109,8 +109,21 @@ export async function GET(request: NextRequest) {
                     },
                     _sum: { totalAmount: true }
                 }),
-                // Mock profile views for now
-                Promise.resolve(Math.floor(Math.random() * 100) + 20)
+                // Get real profile views for this period
+                prisma.profileView.count({
+                    where: {
+                        providerId: provider.id,
+                        createdAt: { gte: periodStart, lt: periodEnd }
+                    }
+                }),
+                // Get real average rating for this period
+                prisma.review.aggregate({
+                    where: {
+                        providerId: provider.id,
+                        createdAt: { gte: periodStart, lt: periodEnd }
+                    },
+                    _avg: { overallRating: true }
+                })
             ]);
 
             return {
@@ -118,7 +131,7 @@ export async function GET(request: NextRequest) {
                 views: profileViews,
                 bookings: bookingCount,
                 revenue: revenueData._sum.totalAmount || 0,
-                rating: Math.round((Math.random() * 2 + 3) * 10) / 10 // Mock rating 3.0-5.0
+                rating: Math.round((avgRating._avg.overallRating || provider.rating || 0) * 10) / 10
             };
         }));
 

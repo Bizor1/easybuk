@@ -159,7 +159,27 @@ export async function GET(request: NextRequest) {
             }
         });
 
-        // Group by category manually
+        // Get previous period data for growth calculation
+        const previousTopServicesData = await prisma.booking.findMany({
+            where: {
+                status: 'COMPLETED',
+                isPaid: true,
+                completedAt: {
+                    gte: previousStartDate,
+                    lt: startDate
+                }
+            },
+            include: {
+                Service: {
+                    select: {
+                        category: true,
+                        name: true
+                    }
+                }
+            }
+        });
+
+        // Group current period by category
         const categoryStats = new Map<string, { count: number; revenue: number; services: Set<string> }>();
 
         topServicesData.forEach(booking => {
@@ -176,14 +196,48 @@ export async function GET(request: NextRequest) {
             stats.services.add(serviceName);
         });
 
-        // Convert to array and sort by revenue
+        // Group previous period by category
+        const previousCategoryStats = new Map<string, { count: number; revenue: number; services: Set<string> }>();
+
+        previousTopServicesData.forEach(booking => {
+            const category = booking.Service?.category || 'Other';
+            const serviceName = booking.Service?.name || 'Unknown Service';
+
+            if (!previousCategoryStats.has(category)) {
+                previousCategoryStats.set(category, { count: 0, revenue: 0, services: new Set() });
+            }
+
+            const stats = previousCategoryStats.get(category)!;
+            stats.count += 1;
+            stats.revenue += booking.totalAmount;
+            stats.services.add(serviceName);
+        });
+
+        // Convert to array and sort by revenue with real growth calculation
         const topServices = Array.from(categoryStats.entries())
-            .map(([category, stats]) => ({
-                name: category,
-                bookings: stats.count,
-                revenue: stats.revenue,
-                growth: 0 // Could calculate with historical data
-            }))
+            .map(([category, stats]) => {
+                const previousStats = previousCategoryStats.get(category);
+                const previousRevenue = previousStats?.revenue || 0;
+
+                // Calculate real growth percentage
+                let growth = 0;
+                if (previousRevenue > 0) {
+                    growth = Math.round(((stats.revenue - previousRevenue) / previousRevenue) * 100 * 100) / 100;
+                } else if (stats.revenue > 0) {
+                    // If there's current revenue but no previous revenue, it's 100% growth
+                    growth = 100;
+                } else {
+                    // If both periods have no revenue, growth is 0
+                    growth = 0;
+                }
+
+                return {
+                    name: category,
+                    bookings: stats.count,
+                    revenue: stats.revenue,
+                    growth
+                };
+            })
             .sort((a, b) => b.revenue - a.revenue)
             .slice(0, 5);
 
