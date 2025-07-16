@@ -55,7 +55,7 @@ export default function Technical() {
                 const data = await response.json();
                 if (data.success && data.items) {
                     const transformedData = data.items.map((item: any) => ({
-                        id: item.id,
+                        id: item.realProviderId || item.id,
                         name: item.name,
                         specialty: item.type === 'professional' ? item.category.charAt(0).toUpperCase() + item.category.slice(1) : item.title,
                         image: item.image,

@@ -75,9 +75,12 @@ export default function ProfessionalServices() {
 
                 const data = await response.json();
 
+                // Extract items from API response structure
+                const items = data.items || [];
+
                 // Transform API data to match UI format
-                const transformedData: ProfessionalServiceProvider[] = data.map((provider: any) => ({
-                    id: provider.id,
+                const transformedData: ProfessionalServiceProvider[] = items.map((provider: any) => ({
+                    id: provider.realProviderId || provider.id,
                     name: provider.name,
                     specialty: provider.category || 'Professional Services',
                     image: provider.profileImage || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",

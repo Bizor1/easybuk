@@ -82,7 +82,7 @@ export default function CreativeServices() {
                 if (data.success && data.items) {
                     // Transform the data to match the expected format
                     const transformedData = data.items.map((item: any) => ({
-                        id: item.id,
+                        id: item.realProviderId || item.id,
                         name: item.name,
                         specialty: item.type === 'professional' ? item.category.charAt(0).toUpperCase() + item.category.slice(1) : item.title,
                         image: item.image,
