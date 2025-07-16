@@ -18,7 +18,7 @@ export default function HealthcareProfessional() {
         const fetchProviderData = async () => {
             try {
                 setLoading(true);
-                const response = await fetch(`/api/professionals/${params.id}`);
+                const response = await fetch(`/api/providers/${params.id}`);
 
                 if (!response.ok) {
                     throw new Error('Professional not found');
@@ -49,7 +49,7 @@ export default function HealthcareProfessional() {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        serviceId: params.id,
+                        providerId: params.id,
                         source: 'healthcare_profile'
                     })
                 });

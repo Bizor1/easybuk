@@ -25,7 +25,7 @@ export default function ProfessionalServices() {
                         <div className="flex items-center space-x-4">
                             <Link href="/" className="text-gray-700 hover:text-blue-600 transition-colors">← Back to Home</Link>
                             <Link href="/auth/signin" className="text-gray-700 hover:text-blue-600 transition-colors">Sign In</Link>
-                            <Link href="/auth/provider/signup" className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-4 py-2 rounded-lg transition-all duration-300">Sign Up</Link>
+                            <Link href="/auth/signup?role=provider" className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-4 py-2 rounded-lg transition-all duration-300">Sign Up</Link>
                         </div>
                     </div>
                 </div>

@@ -213,7 +213,7 @@ export default function Education() {
                         <div className="flex items-center space-x-4">
                             <Link href="/" className="text-gray-700 hover:text-indigo-600 transition-colors">← Back to Home</Link>
                             <Link href="/auth/signin" className="text-gray-700 hover:text-indigo-600 transition-colors">Sign In</Link>
-                            <Link href="/auth/provider/signup" className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg transition-all duration-300">Sign Up</Link>
+                            <Link href="/auth/signup?role=provider" className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg transition-all duration-300">Sign Up</Link>
                             <Link href="/contact" className="btn-secondary">Contact Us</Link>
                         </div>
                     </div>
