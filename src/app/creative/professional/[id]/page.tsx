@@ -4,12 +4,11 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
+import BookingForm from '../../../../components/BookingForm';
 
 export default function CreativeProfessional() {
     const params = useParams();
-    const [selectedDate, setSelectedDate] = useState('');
-    const [selectedTime, setSelectedTime] = useState('');
-    const [projectType, setProjectType] = useState('digital');
+    const [showBookingModal, setShowBookingModal] = useState(false);
     const [professional, setProfessional] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -94,9 +93,24 @@ export default function CreativeProfessional() {
     // Use real reviews data from API
     const reviews = professional.reviewsData || [];
 
-    const availableSlots = [
-        "9:00 AM", "11:00 AM", "1:00 PM", "3:00 PM", "5:00 PM"
-    ];
+    // Service data for the booking modal
+    const serviceData = {
+        id: professional.id,
+        title: professional.businessName || professional.name,
+        description: professional.services?.[0]?.description || `Creative services with ${professional.name}`,
+        basePrice: professional.services?.[0]?.basePrice || 100,
+        currency: 'GHS',
+        pricingType: 'fixed' as const,
+        duration: professional.services?.[0]?.duration || 60,
+        durationUnit: 'minutes',
+        supportedBookingTypes: ['IN_PERSON', 'VIDEO_CALL'] as ('IN_PERSON' | 'VIDEO_CALL' | 'REMOTE' | 'PHONE_CALL')[],
+        provider: {
+            id: professional.id,
+            name: professional.name,
+            avatar: professional.profilePicture,
+            rating: professional.averageRating || 4.5
+        }
+    };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-rose-50">
@@ -290,71 +304,33 @@ export default function CreativeProfessional() {
                             <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-24">
                                 <h3 className="text-2xl font-bold text-gray-800 mb-6">🎨 Start Project</h3>
 
-                                {/* Project Type */}
-                                <div className="mb-6">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Project Type</label>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <button
-                                            onClick={() => setProjectType('digital')}
-                                            className={`p-3 rounded-lg border text-center ${projectType === 'digital'
-                                                ? 'bg-pink-600 text-white border-pink-600'
-                                                : 'bg-gray-50 text-gray-700 border-gray-300'}`}
-                                        >
-                                            💻 Digital
-                                        </button>
-                                        <button
-                                            onClick={() => setProjectType('print')}
-                                            className={`p-3 rounded-lg border text-center ${projectType === 'print'
-                                                ? 'bg-pink-600 text-white border-pink-600'
-                                                : 'bg-gray-50 text-gray-700 border-gray-300'}`}
-                                        >
-                                            🖨️ Print
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* Date Selection */}
-                                <div className="mb-6">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Consultation Date</label>
-                                    <input
-                                        type="date"
-                                        value={selectedDate}
-                                        onChange={(e) => setSelectedDate(e.target.value)}
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                                    />
-                                </div>
-
-                                {/* Time Selection */}
-                                <div className="mb-6">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Available Times</label>
-                                    <div className="grid grid-cols-1 gap-2">
-                                        {availableSlots.map((time) => (
-                                            <button
-                                                key={time}
-                                                onClick={() => setSelectedTime(time)}
-                                                className={`p-2 rounded-lg border text-sm ${selectedTime === time
-                                                    ? 'bg-pink-600 text-white border-pink-600'
-                                                    : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100'}`}
-                                            >
-                                                {time}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Project Fee */}
+                                {/* Professional Summary */}
                                 <div className="mb-6 p-4 bg-pink-50 rounded-lg">
+                                    <div className="flex items-center space-x-3 mb-3">
+                                        <Image
+                                            src={professional.profilePicture}
+                                            alt={professional.name}
+                                            width={50}
+                                            height={50}
+                                            className="rounded-full"
+                                        />
+                                        <div>
+                                            <p className="font-bold text-gray-800">{professional.name}</p>
+                                            <p className="text-pink-600 text-sm">{professional.businessName}</p>
+                                        </div>
+                                    </div>
                                     <div className="flex justify-between items-center">
                                         <span className="text-gray-700">Starting From</span>
-                                        <span className="text-2xl font-bold text-pink-600">{professional.consultation}</span>
+                                        <span className="text-2xl font-bold text-pink-600">
+                                            GH₵{professional.services?.[0]?.basePrice || 100}
+                                        </span>
                                     </div>
-                                    <p className="text-xs text-gray-500 mt-1">Consultation • Custom quote</p>
                                 </div>
 
                                 {/* Book Button */}
                                 <button
-                                    disabled={!selectedDate || !selectedTime}
-                                    className="w-full bg-gradient-to-r from-pink-600 to-rose-600 text-white py-4 rounded-lg font-bold text-lg hover:from-pink-700 hover:to-rose-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    onClick={() => setShowBookingModal(true)}
+                                    className="w-full bg-gradient-to-r from-pink-600 to-rose-600 text-white py-4 rounded-lg font-bold text-lg hover:from-pink-700 hover:to-rose-700 transition-all duration-300"
                                 >
                                     💳 Book Consultation
                                 </button>
@@ -371,6 +347,19 @@ export default function CreativeProfessional() {
                     </div>
                 </div>
             </section>
+
+            {/* Booking Modal */}
+            {showBookingModal && professional && (
+                <BookingForm
+                    service={serviceData}
+                    onClose={() => setShowBookingModal(false)}
+                    onBookingComplete={() => {
+                        setShowBookingModal(false);
+                        // Handle successful booking
+                    }}
+                    category="creative"
+                />
+            )}
         </div>
     );
 } 

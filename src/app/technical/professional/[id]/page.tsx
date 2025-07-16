@@ -4,12 +4,11 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
+import BookingForm from '../../../../components/BookingForm';
 
 export default function TechnicalProfessional() {
     const params = useParams();
-    const [selectedDate, setSelectedDate] = useState('');
-    const [selectedTime, setSelectedTime] = useState('');
-    const [serviceType, setServiceType] = useState('on-site');
+    const [showBookingModal, setShowBookingModal] = useState(false);
 
     // Mock professional data - in real app, fetch based on params.id
     const professional = {
@@ -58,9 +57,24 @@ export default function TechnicalProfessional() {
         }
     ];
 
-    const availableSlots = [
-        "8:00 AM", "9:00 AM", "10:00 AM", "11:00 AM", "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM"
-    ];
+    // Service data for the booking modal
+    const serviceData = {
+        id: professional.id.toString(),
+        title: professional.specialty,
+        description: `Technical services with ${professional.name}`,
+        basePrice: parseFloat(professional.consultation.replace('GH₵', '')),
+        currency: 'GHS',
+        pricingType: 'fixed' as const,
+        duration: 60,
+        durationUnit: 'minutes',
+        supportedBookingTypes: ['IN_PERSON'] as ('IN_PERSON' | 'VIDEO_CALL' | 'REMOTE' | 'PHONE_CALL')[],
+        provider: {
+            id: professional.id.toString(),
+            name: professional.name,
+            avatar: professional.image,
+            rating: professional.rating
+        }
+    };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-orange-50 via-gray-50 to-red-50">
@@ -229,18 +243,14 @@ export default function TechnicalProfessional() {
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Service Type</label>
                                     <div className="grid grid-cols-2 gap-2">
                                         <button
-                                            onClick={() => setServiceType('on-site')}
-                                            className={`p-3 rounded-lg border text-center ${serviceType === 'on-site'
-                                                ? 'bg-orange-600 text-white border-orange-600'
-                                                : 'bg-gray-50 text-gray-700 border-gray-300'}`}
+                                            onClick={() => setShowBookingModal(true)}
+                                            className="p-3 rounded-lg border text-center bg-orange-600 text-white border-orange-600"
                                         >
                                             🏠 On-Site
                                         </button>
                                         <button
-                                            onClick={() => setServiceType('workshop')}
-                                            className={`p-3 rounded-lg border text-center ${serviceType === 'workshop'
-                                                ? 'bg-orange-600 text-white border-orange-600'
-                                                : 'bg-gray-50 text-gray-700 border-gray-300'}`}
+                                            onClick={() => setShowBookingModal(true)}
+                                            className="p-3 rounded-lg border text-center bg-gray-50 text-gray-700 border-gray-300"
                                         >
                                             🔧 Workshop
                                         </button>
@@ -252,8 +262,8 @@ export default function TechnicalProfessional() {
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Select Date</label>
                                     <input
                                         type="date"
-                                        value={selectedDate}
-                                        onChange={(e) => setSelectedDate(e.target.value)}
+                                        value={""} // No date selection in this modal
+                                        onChange={(e) => { }}
                                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                                     />
                                 </div>
@@ -262,17 +272,13 @@ export default function TechnicalProfessional() {
                                 <div className="mb-6">
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Available Times</label>
                                     <div className="grid grid-cols-2 gap-2">
-                                        {availableSlots.map((time) => (
-                                            <button
-                                                key={time}
-                                                onClick={() => setSelectedTime(time)}
-                                                className={`p-2 rounded-lg border text-sm ${selectedTime === time
-                                                    ? 'bg-orange-600 text-white border-orange-600'
-                                                    : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100'}`}
-                                            >
-                                                {time}
-                                            </button>
-                                        ))}
+                                        {/* No time selection in this modal */}
+                                        <button
+                                            onClick={() => { }}
+                                            className="p-2 rounded-lg border text-sm bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100"
+                                        >
+                                            --:--
+                                        </button>
                                     </div>
                                 </div>
 
@@ -287,7 +293,7 @@ export default function TechnicalProfessional() {
 
                                 {/* Book Button */}
                                 <button
-                                    disabled={!selectedDate || !selectedTime}
+                                    onClick={() => setShowBookingModal(true)}
                                     className="w-full bg-gradient-to-r from-orange-600 to-red-600 text-white py-4 rounded-lg font-bold text-lg hover:from-orange-700 hover:to-red-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     💳 Book & Pay Now
@@ -305,6 +311,19 @@ export default function TechnicalProfessional() {
                     </div>
                 </div>
             </section>
+
+            {/* Booking Modal */}
+            {showBookingModal && (
+                <BookingForm
+                    service={serviceData}
+                    onClose={() => setShowBookingModal(false)}
+                    onBookingComplete={() => {
+                        setShowBookingModal(false);
+                        // Handle successful booking
+                    }}
+                    category="technical"
+                />
+            )}
         </div>
     );
 } 

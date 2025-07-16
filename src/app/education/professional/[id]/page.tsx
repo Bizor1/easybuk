@@ -4,12 +4,11 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
+import BookingForm from '../../../../components/BookingForm';
 
 export default function EducationProfessional() {
     const params = useParams();
-    const [selectedDate, setSelectedDate] = useState('');
-    const [selectedTime, setSelectedTime] = useState('');
-    const [sessionType, setSessionType] = useState('online');
+    const [showBookingModal, setShowBookingModal] = useState(false);
 
     // Mock professional data - in real app, fetch based on params.id
     const professional = {
@@ -58,9 +57,24 @@ export default function EducationProfessional() {
         }
     ];
 
-    const availableSlots = [
-        "3:00 PM", "4:00 PM", "5:00 PM", "6:00 PM", "7:00 PM"
-    ];
+    // Service data for the booking modal
+    const serviceData = {
+        id: professional.id.toString(),
+        title: professional.specialty,
+        description: `Mathematics tutoring with ${professional.name}`,
+        basePrice: parseFloat(professional.consultation.replace('GH₵', '')),
+        currency: 'GHS',
+        pricingType: 'fixed' as const,
+        duration: 60,
+        durationUnit: 'minutes',
+        supportedBookingTypes: ['IN_PERSON', 'VIDEO_CALL'] as ('IN_PERSON' | 'VIDEO_CALL' | 'REMOTE' | 'PHONE_CALL')[],
+        provider: {
+            id: professional.id.toString(),
+            name: professional.name,
+            avatar: professional.image,
+            rating: professional.rating
+        }
+    };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-blue-50">
@@ -229,16 +243,16 @@ export default function EducationProfessional() {
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Session Type</label>
                                     <div className="grid grid-cols-2 gap-2">
                                         <button
-                                            onClick={() => setSessionType('online')}
-                                            className={`p-3 rounded-lg border text-center ${sessionType === 'online'
+                                            onClick={() => setShowBookingModal(true)}
+                                            className={`p-3 rounded-lg border text-center ${showBookingModal
                                                 ? 'bg-indigo-600 text-white border-indigo-600'
                                                 : 'bg-gray-50 text-gray-700 border-gray-300'}`}
                                         >
                                             💻 Online
                                         </button>
                                         <button
-                                            onClick={() => setSessionType('home')}
-                                            className={`p-3 rounded-lg border text-center ${sessionType === 'home'
+                                            onClick={() => setShowBookingModal(true)}
+                                            className={`p-3 rounded-lg border text-center ${showBookingModal
                                                 ? 'bg-indigo-600 text-white border-indigo-600'
                                                 : 'bg-gray-50 text-gray-700 border-gray-300'}`}
                                         >
@@ -252,8 +266,8 @@ export default function EducationProfessional() {
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Select Date</label>
                                     <input
                                         type="date"
-                                        value={selectedDate}
-                                        onChange={(e) => setSelectedDate(e.target.value)}
+                                        value={showBookingModal ? serviceData.provider.rating : ''}
+                                        onChange={(e) => { }}
                                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                                     />
                                 </div>
@@ -262,17 +276,7 @@ export default function EducationProfessional() {
                                 <div className="mb-6">
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Available Times</label>
                                     <div className="grid grid-cols-1 gap-2">
-                                        {availableSlots.map((time) => (
-                                            <button
-                                                key={time}
-                                                onClick={() => setSelectedTime(time)}
-                                                className={`p-2 rounded-lg border text-sm ${selectedTime === time
-                                                    ? 'bg-indigo-600 text-white border-indigo-600'
-                                                    : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100'}`}
-                                            >
-                                                {time}
-                                            </button>
-                                        ))}
+                                        {showBookingModal ? serviceData.provider.rating : ''}
                                     </div>
                                 </div>
 
@@ -287,7 +291,7 @@ export default function EducationProfessional() {
 
                                 {/* Book Button */}
                                 <button
-                                    disabled={!selectedDate || !selectedTime}
+                                    disabled={!showBookingModal}
                                     className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white py-4 rounded-lg font-bold text-lg hover:from-indigo-700 hover:to-blue-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     💳 Book & Pay Now
@@ -305,6 +309,18 @@ export default function EducationProfessional() {
                     </div>
                 </div>
             </section>
+
+            {showBookingModal && (
+                <BookingForm
+                    service={serviceData}
+                    onClose={() => setShowBookingModal(false)}
+                    onBookingComplete={() => {
+                        setShowBookingModal(false);
+                        // Handle successful booking
+                    }}
+                    category="education"
+                />
+            )}
         </div>
     );
 } 

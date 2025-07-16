@@ -4,12 +4,11 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
+import BookingForm from '../../../../components/BookingForm';
 
 export default function HomeServicesProfessional() {
     const params = useParams();
-    const [selectedDate, setSelectedDate] = useState('');
-    const [selectedTime, setSelectedTime] = useState('');
-    const [serviceType, setServiceType] = useState('home-visit');
+    const [showBookingModal, setShowBookingModal] = useState(false);
 
     // Mock professional data - in real app, fetch based on params.id
     const professional = {
@@ -58,9 +57,24 @@ export default function HomeServicesProfessional() {
         }
     ];
 
-    const availableSlots = [
-        "8:00 AM", "10:00 AM", "12:00 PM", "2:00 PM", "4:00 PM", "6:00 PM"
-    ];
+    // Service data for the booking modal
+    const serviceData = {
+        id: professional.id.toString(),
+        title: professional.specialty,
+        description: `Home cleaning services with ${professional.name}`,
+        basePrice: parseFloat(professional.consultation.replace('GH₵', '')),
+        currency: 'GHS',
+        pricingType: 'fixed' as const,
+        duration: 120,
+        durationUnit: 'minutes',
+        supportedBookingTypes: ['IN_PERSON'] as ('IN_PERSON' | 'VIDEO_CALL' | 'REMOTE' | 'PHONE_CALL')[],
+        provider: {
+            id: professional.id.toString(),
+            name: professional.name,
+            avatar: professional.image,
+            rating: professional.rating
+        }
+    };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50">
@@ -229,60 +243,41 @@ export default function HomeServicesProfessional() {
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Service Location</label>
                                     <div className="grid grid-cols-1 gap-2">
                                         <button
-                                            onClick={() => setServiceType('home-visit')}
-                                            className={`p-3 rounded-lg border text-center ${serviceType === 'home-visit'
-                                                ? 'bg-green-600 text-white border-green-600'
-                                                : 'bg-gray-50 text-gray-700 border-gray-300'}`}
+                                            onClick={() => setShowBookingModal(true)}
+                                            className="p-3 rounded-lg border text-center bg-green-600 text-white border-green-600"
                                         >
                                             🏠 Home Visit
                                         </button>
                                     </div>
                                 </div>
 
-                                {/* Date Selection */}
-                                <div className="mb-6">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Select Date</label>
-                                    <input
-                                        type="date"
-                                        value={selectedDate}
-                                        onChange={(e) => setSelectedDate(e.target.value)}
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                    />
-                                </div>
-
-                                {/* Time Selection */}
-                                <div className="mb-6">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Available Times</label>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        {availableSlots.map((time) => (
-                                            <button
-                                                key={time}
-                                                onClick={() => setSelectedTime(time)}
-                                                className={`p-2 rounded-lg border text-sm ${selectedTime === time
-                                                    ? 'bg-green-600 text-white border-green-600'
-                                                    : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100'}`}
-                                            >
-                                                {time}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Service Fee */}
+                                {/* Professional Summary */}
                                 <div className="mb-6 p-4 bg-green-50 rounded-lg">
+                                    <div className="flex items-center space-x-3 mb-3">
+                                        <Image
+                                            src={professional.image}
+                                            alt={professional.name}
+                                            width={50}
+                                            height={50}
+                                            className="rounded-full"
+                                        />
+                                        <div>
+                                            <p className="font-bold text-gray-800">{professional.name}</p>
+                                            <p className="text-green-600 text-sm">{professional.specialty}</p>
+                                        </div>
+                                    </div>
                                     <div className="flex justify-between items-center">
-                                        <span className="text-gray-700">Starting Rate</span>
+                                        <span className="text-gray-700">Service Fee</span>
                                         <span className="text-2xl font-bold text-green-600">{professional.consultation}</span>
                                     </div>
-                                    <p className="text-xs text-gray-500 mt-1">Per hour • 3-hour minimum</p>
                                 </div>
 
                                 {/* Book Button */}
                                 <button
-                                    disabled={!selectedDate || !selectedTime}
-                                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-4 rounded-lg font-bold text-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    onClick={() => setShowBookingModal(true)}
+                                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-4 rounded-lg font-bold text-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-300"
                                 >
-                                    💳 Book & Pay Now
+                                    💳 Book Service
                                 </button>
 
                                 {/* Business Info */}
@@ -297,6 +292,19 @@ export default function HomeServicesProfessional() {
                     </div>
                 </div>
             </section>
+
+            {/* Booking Modal */}
+            {showBookingModal && (
+                <BookingForm
+                    service={serviceData}
+                    onClose={() => setShowBookingModal(false)}
+                    onBookingComplete={() => {
+                        setShowBookingModal(false);
+                        // Handle successful booking
+                    }}
+                    category="home"
+                />
+            )}
         </div>
     );
 } 

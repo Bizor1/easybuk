@@ -4,12 +4,11 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
+import BookingForm from '../../../../components/BookingForm';
 
 export default function HealthcareProfessional() {
     const params = useParams();
-    const [selectedDate, setSelectedDate] = useState('');
-    const [selectedTime, setSelectedTime] = useState('');
-    const [bookingType, setBookingType] = useState('in-person');
+    const [showBookingModal, setShowBookingModal] = useState(false);
 
     // Mock professional data - in real app, fetch based on params.id
     const professional = {
@@ -58,9 +57,24 @@ export default function HealthcareProfessional() {
         }
     ];
 
-    const availableSlots = [
-        "9:00 AM", "10:00 AM", "11:00 AM", "2:00 PM", "3:00 PM", "4:00 PM"
-    ];
+    // Service data for the booking modal
+    const serviceData = {
+        id: professional.id.toString(),
+        title: professional.specialty,
+        description: `Healthcare consultation with ${professional.name}`,
+        basePrice: parseFloat(professional.consultation.replace('GH₵', '')),
+        currency: 'GHS',
+        pricingType: 'fixed' as const,
+        duration: 30,
+        durationUnit: 'minutes',
+        supportedBookingTypes: ['IN_PERSON', 'VIDEO_CALL'] as ('IN_PERSON' | 'VIDEO_CALL' | 'REMOTE' | 'PHONE_CALL')[],
+        provider: {
+            id: professional.id.toString(),
+            name: professional.name,
+            avatar: professional.image,
+            rating: professional.rating
+        }
+    };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
@@ -224,60 +238,21 @@ export default function HealthcareProfessional() {
                             <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-24">
                                 <h3 className="text-2xl font-bold text-gray-800 mb-6">📅 Book Appointment</h3>
 
-                                {/* Booking Type */}
-                                <div className="mb-6">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Consultation Type</label>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <button
-                                            onClick={() => setBookingType('in-person')}
-                                            className={`p-3 rounded-lg border text-center ${bookingType === 'in-person'
-                                                ? 'bg-blue-600 text-white border-blue-600'
-                                                : 'bg-gray-50 text-gray-700 border-gray-300'}`}
-                                        >
-                                            🏥 In-Person
-                                        </button>
-                                        <button
-                                            onClick={() => setBookingType('video')}
-                                            className={`p-3 rounded-lg border text-center ${bookingType === 'video'
-                                                ? 'bg-blue-600 text-white border-blue-600'
-                                                : 'bg-gray-50 text-gray-700 border-gray-300'}`}
-                                        >
-                                            📹 Video Call
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* Date Selection */}
-                                <div className="mb-6">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Select Date</label>
-                                    <input
-                                        type="date"
-                                        value={selectedDate}
-                                        onChange={(e) => setSelectedDate(e.target.value)}
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    />
-                                </div>
-
-                                {/* Time Selection */}
-                                <div className="mb-6">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Available Times</label>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        {availableSlots.map((time) => (
-                                            <button
-                                                key={time}
-                                                onClick={() => setSelectedTime(time)}
-                                                className={`p-2 rounded-lg border text-sm ${selectedTime === time
-                                                    ? 'bg-blue-600 text-white border-blue-600'
-                                                    : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100'}`}
-                                            >
-                                                {time}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Consultation Fee */}
+                                {/* Professional Summary */}
                                 <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+                                    <div className="flex items-center space-x-3 mb-3">
+                                        <Image
+                                            src={professional.image}
+                                            alt={professional.name}
+                                            width={50}
+                                            height={50}
+                                            className="rounded-full"
+                                        />
+                                        <div>
+                                            <p className="font-bold text-gray-800">{professional.name}</p>
+                                            <p className="text-blue-600 text-sm">{professional.specialty}</p>
+                                        </div>
+                                    </div>
                                     <div className="flex justify-between items-center">
                                         <span className="text-gray-700">Consultation Fee</span>
                                         <span className="text-2xl font-bold text-blue-600">{professional.consultation}</span>
@@ -286,10 +261,10 @@ export default function HealthcareProfessional() {
 
                                 {/* Book Button */}
                                 <button
-                                    disabled={!selectedDate || !selectedTime}
-                                    className="w-full bg-gradient-to-r from-blue-600 to-green-600 text-white py-4 rounded-lg font-bold text-lg hover:from-blue-700 hover:to-green-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    onClick={() => setShowBookingModal(true)}
+                                    className="w-full bg-gradient-to-r from-blue-600 to-green-600 text-white py-4 rounded-lg font-bold text-lg hover:from-blue-700 hover:to-green-700 transition-all duration-300"
                                 >
-                                    💳 Book & Pay Now
+                                    💳 Book Consultation
                                 </button>
 
                                 {/* Clinic Info */}
@@ -304,6 +279,19 @@ export default function HealthcareProfessional() {
                     </div>
                 </div>
             </section>
+
+            {/* Booking Modal */}
+            {showBookingModal && (
+                <BookingForm
+                    service={serviceData}
+                    onClose={() => setShowBookingModal(false)}
+                    onBookingComplete={() => {
+                        setShowBookingModal(false);
+                        // Handle successful booking (e.g., show confirmation, redirect)
+                    }}
+                    category="healthcare"
+                />
+            )}
         </div>
     );
 } 
