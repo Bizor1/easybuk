@@ -235,27 +235,49 @@ export default function HealthcareProfessional() {
                                     {professional.education && professional.education.length > 0 && (
                                         <div>
                                             <h3 className="text-lg font-bold text-gray-800 mb-3">🎓 Education</h3>
-                                            <ul className="space-y-2">
+                                            <div className="space-y-3">
                                                 {professional.education.map((edu: string, index: number) => (
-                                                    <li key={index} className="text-gray-600 flex items-start">
+                                                    <div key={index} className="flex items-start">
                                                         <span className="w-2 h-2 bg-blue-500 rounded-full mr-3 mt-2 flex-shrink-0"></span>
-                                                        {edu}
-                                                    </li>
+                                                        {edu.startsWith('http') ? (
+                                                            <a
+                                                                href={edu}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="text-blue-600 hover:text-blue-700 underline text-sm"
+                                                            >
+                                                                View Medical Certificate {index + 1}
+                                                            </a>
+                                                        ) : (
+                                                            <span className="text-gray-600 text-sm">{edu}</span>
+                                                        )}
+                                                    </div>
                                                 ))}
-                                            </ul>
+                                            </div>
                                         </div>
                                     )}
                                     {professional.certifications && professional.certifications.length > 0 && (
                                         <div>
                                             <h3 className="text-lg font-bold text-gray-800 mb-3">🏆 Certifications</h3>
-                                            <ul className="space-y-2">
+                                            <div className="space-y-3">
                                                 {professional.certifications.map((cert: string, index: number) => (
-                                                    <li key={index} className="text-gray-600 flex items-start">
+                                                    <div key={index} className="flex items-start">
                                                         <span className="w-2 h-2 bg-green-500 rounded-full mr-3 mt-2 flex-shrink-0"></span>
-                                                        {cert}
-                                                    </li>
+                                                        {cert.startsWith('http') ? (
+                                                            <a
+                                                                href={cert}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="text-green-600 hover:text-green-700 underline text-sm"
+                                                            >
+                                                                View Medical License {index + 1}
+                                                            </a>
+                                                        ) : (
+                                                            <span className="text-gray-600 text-sm">{cert}</span>
+                                                        )}
+                                                    </div>
                                                 ))}
-                                            </ul>
+                                            </div>
                                         </div>
                                     )}
                                     {(!professional.education || professional.education.length === 0) && (!professional.certifications || professional.certifications.length === 0) && (

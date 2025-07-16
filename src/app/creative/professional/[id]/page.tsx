@@ -252,25 +252,55 @@ export default function CreativeProfessional() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
                                         <h3 className="text-lg font-bold text-gray-800 mb-3">🎓 Education & Training</h3>
-                                        <ul className="space-y-2">
-                                            {professional.education.map((edu: any, index: any) => (
-                                                <li key={index} className="text-gray-600 flex items-start">
-                                                    <span className="w-2 h-2 bg-pink-500 rounded-full mr-3 mt-2 flex-shrink-0"></span>
-                                                    {edu}
-                                                </li>
-                                            ))}
-                                        </ul>
+                                        {professional.education && professional.education.length > 0 ? (
+                                            <div className="space-y-3">
+                                                {professional.education.map((edu: any, index: any) => (
+                                                    <div key={index} className="flex items-start">
+                                                        <span className="w-2 h-2 bg-pink-500 rounded-full mr-3 mt-2 flex-shrink-0"></span>
+                                                        {edu.startsWith('http') ? (
+                                                            <a
+                                                                href={edu}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="text-pink-600 hover:text-pink-700 underline text-sm"
+                                                            >
+                                                                View Training Certificate {index + 1}
+                                                            </a>
+                                                        ) : (
+                                                            <span className="text-gray-600 text-sm">{edu}</span>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className="text-gray-500 text-sm">Educational background information available upon request</p>
+                                        )}
                                     </div>
                                     <div>
                                         <h3 className="text-lg font-bold text-gray-800 mb-3">🏆 Certifications</h3>
-                                        <ul className="space-y-2">
-                                            {professional.certifications.map((cert: any, index: any) => (
-                                                <li key={index} className="text-gray-600 flex items-start">
-                                                    <span className="w-2 h-2 bg-rose-500 rounded-full mr-3 mt-2 flex-shrink-0"></span>
-                                                    {cert}
-                                                </li>
-                                            ))}
-                                        </ul>
+                                        {professional.certifications && professional.certifications.length > 0 ? (
+                                            <div className="space-y-3">
+                                                {professional.certifications.map((cert: any, index: any) => (
+                                                    <div key={index} className="flex items-start">
+                                                        <span className="w-2 h-2 bg-rose-500 rounded-full mr-3 mt-2 flex-shrink-0"></span>
+                                                        {cert.startsWith('http') ? (
+                                                            <a
+                                                                href={cert}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="text-rose-600 hover:text-rose-700 underline text-sm"
+                                                            >
+                                                                View Professional Certificate {index + 1}
+                                                            </a>
+                                                        ) : (
+                                                            <span className="text-gray-600 text-sm">{cert}</span>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className="text-gray-500 text-sm">Professional certifications available upon request</p>
+                                        )}
                                     </div>
                                 </div>
                             </div>
