@@ -210,11 +210,12 @@ export default function CreativeProfessional() {
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                         {professional.portfolio && professional.portfolio.length > 0 ? (
                                             professional.portfolio.slice(0, 4).map((item: any, index: any) => (
-                                                <div key={index} className="aspect-square bg-gradient-to-br from-pink-100 to-rose-100 rounded-lg overflow-hidden">
-                                                    <img
+                                                <div key={index} className="aspect-square bg-gradient-to-br from-pink-100 to-rose-100 rounded-lg overflow-hidden relative">
+                                                    <Image
                                                         src={item.image}
                                                         alt={item.title}
-                                                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                                                        fill
+                                                        className="object-cover hover:scale-105 transition-transform duration-300"
                                                     />
                                                 </div>
                                             ))

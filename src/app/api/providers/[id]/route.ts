@@ -38,7 +38,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
                         name: true,
                         category: true,
                         description: true,
-                        price: true,
+                        basePrice: true,
                         duration: true
                     }
                 },
@@ -121,7 +121,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
             name: service.name,
             category: service.category,
             description: service.description,
-            price: service.price,
+            price: service.basePrice,
             duration: service.duration
         }));
 
@@ -158,8 +158,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
             services: services.map(s => s.name),
             servicesDetailed: services,
             about: provider.bio || `Professional ${provider.category} with years of experience providing quality services.`,
-            education: provider.certifications || [],
-            certifications: provider.licenses || [],
+            education: provider.certificateUrls || [],
+            certifications: provider.licenseUrl ? [provider.licenseUrl] : [],
             portfolio: portfolioItems,
             reviewsData: reviews,
             workingHours: availability,
