@@ -4,6 +4,25 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 
+interface HealthcareProfessional {
+    id: number;
+    name: string;
+    specialty: string;
+    image: string;
+    rating: number;
+    reviews: number;
+    experience: string;
+    location: string;
+    consultation: string;
+    availability: string;
+    verified: boolean;
+    languages: string[];
+    services: string[];
+    type?: string;
+    realServiceId?: string;
+    realProviderId?: string;
+}
+
 export default function Healthcare() {
     const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
     const [searchLocation, setSearchLocation] = useState('');
@@ -41,69 +60,59 @@ export default function Healthcare() {
         }
     ];
 
-    // Healthcare professionals data
-    const healthcareProfessionals = [
-        {
-            id: 1,
-            name: "Dr. Kwame Asante",
-            specialty: "General Practice",
-            image: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
-            rating: 4.9,
-            reviews: 156,
-            experience: "15 years",
-            location: "Accra Central",
-            consultation: "GH₵80",
-            availability: "Available today",
-            verified: true,
-            languages: ["English", "Twi"],
-            services: ["General Consultation", "Health Checkups", "Vaccinations"]
-        },
-        {
-            id: 2,
-            name: "Dr. Ama Osei",
-            specialty: "Pediatrics",
-            image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
-            rating: 4.8,
-            reviews: 203,
-            experience: "12 years",
-            location: "Kumasi",
-            consultation: "GH₵100",
-            availability: "Available tomorrow",
-            verified: true,
-            languages: ["English", "Twi", "Ga"],
-            services: ["Child Healthcare", "Immunizations", "Growth Monitoring"]
-        },
-        {
-            id: 3,
-            name: "Nurse Sarah Mensah",
-            specialty: "Home Care Nursing",
-            image: "https://images.unsplash.com/photo-1594824724159-9d0d18e2d4d1?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
-            rating: 4.9,
-            reviews: 89,
-            experience: "8 years",
-            location: "Tema",
-            consultation: "GH₵60",
-            availability: "Available now",
-            verified: true,
-            languages: ["English", "Ga"],
-            services: ["Wound Care", "Medication Administration", "Patient Monitoring"]
-        },
-        {
-            id: 4,
-            name: "Dr. Kofi Mensah",
-            specialty: "Cardiology",
-            image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
-            rating: 4.7,
-            reviews: 124,
-            experience: "20 years",
-            location: "Accra",
-            consultation: "GH₵200",
-            availability: "Available this week",
-            verified: true,
-            languages: ["English", "Twi"],
-            services: ["Heart Consultation", "ECG Reading", "Blood Pressure Management"]
-        }
-    ];
+    // State for real healthcare data
+    const [healthcareProfessionals, setHealthcareProfessionals] = useState<HealthcareProfessional[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    // Fetch real healthcare professionals and services
+    useEffect(() => {
+        const fetchHealthcareData = async () => {
+            try {
+                setLoading(true);
+                const response = await fetch('/api/explore?category=healthcare&limit=50');
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch healthcare data');
+                }
+
+                const data = await response.json();
+
+                if (data.success && data.items) {
+                    // Transform the data to match the expected format
+                    const transformedData = data.items.map((item: any) => ({
+                        id: item.id,
+                        name: item.name,
+                        specialty: item.type === 'professional' ? item.category.charAt(0).toUpperCase() + item.category.slice(1) : item.title,
+                        image: item.image,
+                        rating: item.rating,
+                        reviews: item.reviews || 0,
+                        experience: item.type === 'professional' ? "Professional" : "Service Provider",
+                        location: item.location,
+                        consultation: item.price,
+                        availability: item.availability || item.badge,
+                        verified: item.isVerified || false,
+                        languages: ["English", "Local Languages"],
+                        services: item.type === 'professional' ? (item.specialties || item.skills || []).slice(0, 3) : [item.name],
+                        type: item.type,
+                        realServiceId: item.realServiceId,
+                        realProviderId: item.realProviderId
+                    }));
+
+                    setHealthcareProfessionals(transformedData);
+                } else {
+                    throw new Error('Invalid response format');
+                }
+            } catch (err) {
+                console.error('Error fetching healthcare data:', err);
+                setError(err instanceof Error ? err.message : 'Unknown error occurred');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchHealthcareData();
+    }, []);
 
     // Auto-advance carousel
     useEffect(() => {
@@ -290,86 +299,108 @@ export default function Healthcare() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {healthcareProfessionals.map((professional) => (
-                            <div key={professional.id} className="bg-white rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300 overflow-hidden">
-                                <div className="p-6">
-                                    <div className="flex items-start space-x-4">
-                                        <div className="relative">
-                                            <Image
-                                                src={professional.image}
-                                                alt={professional.name}
-                                                width={80}
-                                                height={80}
-                                                className="rounded-full object-cover"
-                                            />
-                                            {professional.verified && (
-                                                <div className="absolute -bottom-1 -right-1 bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">
-                                                    ✓
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="flex-1">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <h3 className="text-xl font-bold text-gray-800">{professional.name}</h3>
-                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${professional.availability === 'Available now'
-                                                    ? 'bg-green-100 text-green-800'
-                                                    : 'bg-yellow-100 text-yellow-800'
-                                                    }`}>
-                                                    {professional.availability}
-                                                </span>
+                    {loading ? (
+                        <div className="flex justify-center items-center py-12">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                            <span className="ml-3 text-lg text-gray-600">Loading healthcare professionals...</span>
+                        </div>
+                    ) : error ? (
+                        <div className="text-center py-12">
+                            <div className="text-red-600 text-xl mb-4">⚠️ {error}</div>
+                            <button
+                                onClick={() => window.location.reload()}
+                                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                            >
+                                Try Again
+                            </button>
+                        </div>
+                    ) : healthcareProfessionals.length === 0 ? (
+                        <div className="text-center py-12">
+                            <div className="text-gray-600 text-xl mb-4">🔍 No healthcare professionals found</div>
+                            <p className="text-gray-500">Please try again later or check other categories.</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            {healthcareProfessionals.map((professional) => (
+                                <div key={professional.id} className="bg-white rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300 overflow-hidden">
+                                    <div className="p-6">
+                                        <div className="flex items-start space-x-4">
+                                            <div className="relative">
+                                                <Image
+                                                    src={professional.image}
+                                                    alt={professional.name}
+                                                    width={80}
+                                                    height={80}
+                                                    className="rounded-full object-cover"
+                                                />
+                                                {professional.verified && (
+                                                    <div className="absolute -bottom-1 -right-1 bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">
+                                                        ✓
+                                                    </div>
+                                                )}
                                             </div>
 
-                                            <p className="text-blue-600 font-medium mb-1">{professional.specialty}</p>
-                                            <p className="text-gray-500 text-sm mb-2">📍 {professional.location} • {professional.experience} experience</p>
-
-                                            <div className="flex items-center space-x-4 mb-3">
-                                                <div className="flex items-center">
-                                                    <span className="text-yellow-400 mr-1">⭐</span>
-                                                    <span className="font-bold text-gray-800">{professional.rating}</span>
-                                                    <span className="text-gray-500 text-sm ml-1">({professional.reviews} reviews)</span>
-                                                </div>
-                                                <div className="text-2xl font-bold text-blue-600">{professional.consultation}</div>
-                                            </div>
-
-                                            <div className="flex items-center space-x-2 mb-4">
-                                                <span className="text-sm text-gray-600">Languages:</span>
-                                                {professional.languages.map((lang, index) => (
-                                                    <span key={index} className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
-                                                        {lang}
+                                            <div className="flex-1">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <h3 className="text-xl font-bold text-gray-800">{professional.name}</h3>
+                                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${professional.availability === 'Available now'
+                                                        ? 'bg-green-100 text-green-800'
+                                                        : 'bg-yellow-100 text-yellow-800'
+                                                        }`}>
+                                                        {professional.availability}
                                                     </span>
-                                                ))}
-                                            </div>
+                                                </div>
 
-                                            <div className="mb-4">
-                                                <p className="text-sm text-gray-600 mb-1">Services:</p>
-                                                <div className="flex flex-wrap gap-1">
-                                                    {professional.services.map((service, index) => (
-                                                        <span key={index} className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs">
-                                                            {service}
+                                                <p className="text-blue-600 font-medium mb-1">{professional.specialty}</p>
+                                                <p className="text-gray-500 text-sm mb-2">📍 {professional.location} • {professional.experience} experience</p>
+
+                                                <div className="flex items-center space-x-4 mb-3">
+                                                    <div className="flex items-center">
+                                                        <span className="text-yellow-400 mr-1">⭐</span>
+                                                        <span className="font-bold text-gray-800">{professional.rating}</span>
+                                                        <span className="text-gray-500 text-sm ml-1">({professional.reviews} reviews)</span>
+                                                    </div>
+                                                    <div className="text-2xl font-bold text-blue-600">{professional.consultation}</div>
+                                                </div>
+
+                                                <div className="flex items-center space-x-2 mb-4">
+                                                    <span className="text-sm text-gray-600">Languages:</span>
+                                                    {professional.languages.map((lang, index) => (
+                                                        <span key={index} className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
+                                                            {lang}
                                                         </span>
                                                     ))}
                                                 </div>
-                                            </div>
 
-                                            <div className="flex space-x-3">
-                                                <Link
-                                                    href={`/healthcare/professional/${professional.id}`}
-                                                    className="flex-1 bg-gradient-to-r from-blue-600 to-green-600 text-white py-2 px-4 rounded-lg font-bold text-center hover:from-blue-700 hover:to-green-700 transition-all duration-300"
-                                                >
-                                                    View Profile & Book
-                                                </Link>
-                                                <button className="border border-blue-600 text-blue-600 py-2 px-4 rounded-lg font-bold hover:bg-blue-50 transition-colors">
-                                                    💬 Message
-                                                </button>
+                                                <div className="mb-4">
+                                                    <p className="text-sm text-gray-600 mb-1">Services:</p>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {professional.services.map((service, index) => (
+                                                            <span key={index} className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs">
+                                                                {service}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex space-x-3">
+                                                    <Link
+                                                        href={`/healthcare/professional/${professional.id}`}
+                                                        className="flex-1 bg-gradient-to-r from-blue-600 to-green-600 text-white py-2 px-4 rounded-lg font-bold text-center hover:from-blue-700 hover:to-green-700 transition-all duration-300"
+                                                    >
+                                                        View Profile & Book
+                                                    </Link>
+                                                    <button className="border border-blue-600 text-blue-600 py-2 px-4 rounded-lg font-bold hover:bg-blue-50 transition-colors">
+                                                        💬 Message
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    )}
 
                     <div className="text-center mt-12">
                         <button className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-8 py-3 rounded-lg font-bold transition-colors">

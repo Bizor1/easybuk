@@ -41,8 +41,50 @@ export default function Technical() {
         }
     ];
 
-    // Technical professionals data
-    const technicalProfessionals = [
+    // State for real technical data
+    const [technicalProfessionals, setTechnicalProfessionals] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    // Fetch real technical professionals and services
+    useEffect(() => {
+        const fetchTechnicalData = async () => {
+            try {
+                setLoading(true);
+                const response = await fetch('/api/explore?category=technical&limit=50');
+                const data = await response.json();
+                if (data.success && data.items) {
+                    const transformedData = data.items.map((item: any) => ({
+                        id: item.id,
+                        name: item.name,
+                        specialty: item.type === 'professional' ? item.category.charAt(0).toUpperCase() + item.category.slice(1) : item.title,
+                        image: item.image,
+                        rating: item.rating,
+                        reviews: item.reviews || 0,
+                        experience: item.type === 'professional' ? "Technical Professional" : "Service Provider",
+                        location: item.location,
+                        consultation: item.price,
+                        availability: item.availability || item.badge,
+                        verified: item.isVerified || false,
+                        specializations: item.type === 'professional' ? (item.specialties || item.skills || []).slice(0, 3) : [item.category],
+                        services: item.type === 'professional' ? (item.specialties || item.skills || []).slice(0, 4) : [item.name],
+                        description: item.description || item.title || "Experienced technical professional"
+                    }));
+                    setTechnicalProfessionals(transformedData);
+                } else {
+                    setError('Failed to load technical professionals. Please try again later.');
+                }
+            } catch (error) {
+                setError('Failed to load technical professionals. Please try again later.');
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchTechnicalData();
+    }, []);
+
+    // Fallback dummy data
+    const fallbackTechnicalProfessionals = [
         {
             id: 1,
             name: "Kwame Boateng",
@@ -293,95 +335,120 @@ export default function Technical() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {technicalProfessionals.map((professional) => (
-                            <div key={professional.id} className="bg-white rounded-2xl shadow-lg border-l-4 border-orange-500 hover:shadow-xl transition-all duration-300 overflow-hidden">
-                                <div className="p-6">
-                                    <div className="flex items-start space-x-4">
-                                        <div className="relative">
-                                            <Image
-                                                src={professional.image}
-                                                alt={professional.name}
-                                                width={80}
-                                                height={80}
-                                                className="rounded-full object-cover"
-                                            />
-                                            {professional.verified && (
-                                                <div className="absolute -bottom-1 -right-1 bg-orange-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">
-                                                    ✓
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="flex-1">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <h3 className="text-xl font-bold text-gray-800">{professional.name}</h3>
-                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${professional.availability === 'Available now'
-                                                    ? 'bg-green-100 text-green-800'
-                                                    : professional.availability === 'Available today'
-                                                        ? 'bg-blue-100 text-blue-800'
-                                                        : 'bg-yellow-100 text-yellow-800'
-                                                    }`}>
-                                                    {professional.availability}
-                                                </span>
+                    {/* Loading/Error/Empty States */}
+                    {loading && (
+                        <div className="text-center py-12">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
+                            <p className="text-gray-600">Loading technical professionals...</p>
+                        </div>
+                    )}
+                    {error && (
+                        <div className="text-center py-12">
+                            <div className="text-red-500 text-6xl mb-4">⚠️</div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-2">Failed to Load Data</h3>
+                            <p className="text-gray-600 mb-4">{error}</p>
+                            <button onClick={() => window.location.reload()} className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg transition-colors">Try Again</button>
+                        </div>
+                    )}
+                    {!loading && !error && technicalProfessionals.length === 0 && (
+                        <div className="text-center py-12">
+                            <div className="text-gray-400 text-6xl mb-4">🔧</div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-2">No Technical Professionals Found</h3>
+                            <p className="text-gray-600 mb-4">We&apos;re working to add more technical professionals to our platform.</p>
+                            <Link href="/explore" className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg transition-colors inline-block">Explore Other Categories</Link>
+                        </div>
+                    )}
+                    {!loading && !error && technicalProfessionals.length > 0 && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            {technicalProfessionals.map((professional: any) => (
+                                <div key={professional.id} className="bg-white rounded-2xl shadow-lg border-l-4 border-orange-500 hover:shadow-xl transition-all duration-300 overflow-hidden">
+                                    <div className="p-6">
+                                        <div className="flex items-start space-x-4">
+                                            <div className="relative">
+                                                <Image
+                                                    src={professional.image}
+                                                    alt={professional.name}
+                                                    width={80}
+                                                    height={80}
+                                                    className="rounded-full object-cover"
+                                                />
+                                                {professional.verified && (
+                                                    <div className="absolute -bottom-1 -right-1 bg-orange-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">
+                                                        ✓
+                                                    </div>
+                                                )}
                                             </div>
 
-                                            <p className="text-orange-600 font-medium mb-1">{professional.specialty}</p>
-                                            <p className="text-gray-500 text-sm mb-2">📍 {professional.location} • {professional.experience} experience</p>
-
-                                            <div className="flex items-center space-x-4 mb-3">
-                                                <div className="flex items-center">
-                                                    <span className="text-yellow-400 mr-1">⭐</span>
-                                                    <span className="font-bold text-gray-800">{professional.rating}</span>
-                                                    <span className="text-gray-500 text-sm ml-1">({professional.reviews} reviews)</span>
+                                            <div className="flex-1">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <h3 className="text-xl font-bold text-gray-800">{professional.name}</h3>
+                                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${professional.availability === 'Available now'
+                                                        ? 'bg-green-100 text-green-800'
+                                                        : professional.availability === 'Available today'
+                                                            ? 'bg-blue-100 text-blue-800'
+                                                            : 'bg-yellow-100 text-yellow-800'
+                                                        }`}>
+                                                        {professional.availability}
+                                                    </span>
                                                 </div>
-                                                <div className="text-2xl font-bold text-orange-600">{professional.consultation}</div>
-                                            </div>
 
-                                            <div className="mb-4">
-                                                <p className="text-sm text-gray-600 mb-1">Specializations:</p>
-                                                <div className="flex flex-wrap gap-1">
-                                                    {professional.specializations.map((spec, index) => (
-                                                        <span key={index} className="bg-orange-50 text-orange-700 px-2 py-1 rounded text-xs">
-                                                            {spec}
-                                                        </span>
-                                                    ))}
+                                                <p className="text-orange-600 font-medium mb-1">{professional.specialty}</p>
+                                                <p className="text-gray-500 text-sm mb-2">📍 {professional.location} • {professional.experience} experience</p>
+
+                                                <div className="flex items-center space-x-4 mb-3">
+                                                    <div className="flex items-center">
+                                                        <span className="text-yellow-400 mr-1">⭐</span>
+                                                        <span className="font-bold text-gray-800">{professional.rating}</span>
+                                                        <span className="text-gray-500 text-sm ml-1">({professional.reviews} reviews)</span>
+                                                    </div>
+                                                    <div className="text-2xl font-bold text-orange-600">{professional.consultation}</div>
                                                 </div>
-                                            </div>
 
-                                            <div className="mb-4">
-                                                <p className="text-sm text-gray-600 mb-1">Services:</p>
-                                                <div className="flex flex-wrap gap-1">
-                                                    {professional.services.slice(0, 3).map((service, index) => (
-                                                        <span key={index} className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
-                                                            {service}
-                                                        </span>
-                                                    ))}
-                                                    {professional.services.length > 3 && (
-                                                        <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
-                                                            +{professional.services.length - 3} more
-                                                        </span>
-                                                    )}
+                                                <div className="mb-4">
+                                                    <p className="text-sm text-gray-600 mb-1">Specializations:</p>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {professional.specializations.map((spec: string, index: number) => (
+                                                            <span key={index} className="bg-orange-50 text-orange-700 px-2 py-1 rounded text-xs">
+                                                                {spec}
+                                                            </span>
+                                                        ))}
+                                                    </div>
                                                 </div>
-                                            </div>
 
-                                            <div className="flex space-x-3">
-                                                <Link
-                                                    href={`/technical/professional/${professional.id}`}
-                                                    className="flex-1 bg-gradient-to-r from-orange-600 to-red-600 text-white py-2 px-4 rounded-lg font-bold text-center hover:from-orange-700 hover:to-red-700 transition-all duration-300"
-                                                >
-                                                    View Profile & Book
-                                                </Link>
-                                                <button className="border border-orange-600 text-orange-600 py-2 px-4 rounded-lg font-bold hover:bg-orange-50 transition-colors">
-                                                    📞 Call
-                                                </button>
+                                                <div className="mb-4">
+                                                    <p className="text-sm text-gray-600 mb-1">Services:</p>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {professional.services.slice(0, 3).map((service: string, index: number) => (
+                                                            <span key={index} className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
+                                                                {service}
+                                                            </span>
+                                                        ))}
+                                                        {professional.services.length > 3 && (
+                                                            <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
+                                                                +{professional.services.length - 3} more
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex space-x-3">
+                                                    <Link
+                                                        href={`/technical/professional/${professional.id}`}
+                                                        className="flex-1 bg-gradient-to-r from-orange-600 to-red-600 text-white py-2 px-4 rounded-lg font-bold text-center hover:from-orange-700 hover:to-red-700 transition-all duration-300"
+                                                    >
+                                                        View Profile & Book
+                                                    </Link>
+                                                    <button className="border border-orange-600 text-orange-600 py-2 px-4 rounded-lg font-bold hover:bg-orange-50 transition-colors">
+                                                        📞 Call
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    )}
 
                     <div className="text-center mt-12">
                         <button className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-8 py-3 rounded-lg font-bold transition-colors">

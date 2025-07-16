@@ -676,9 +676,9 @@ export default function Explore() {
                         {/* Smooth Categories */}
                         <div className="flex items-center space-x-3 overflow-x-auto category-scroll pb-2">
                             {categories.map((category) => (
-                                <button
+                                <Link
                                     key={category.id}
-                                    onClick={() => setSelectedCategory(category.id)}
+                                    href={category.id === 'all' ? '/explore' : `/${category.id === 'home' ? 'home-services' : category.id === 'professional' ? 'professional-services' : category.id === 'technical' ? 'technical' : category.id}`}
                                     className={`relative flex items-center space-x-2 px-4 py-2 rounded-xl font-medium whitespace-nowrap transition-all duration-300 transform hover:scale-105 ${selectedCategory === category.id
                                         ? `bg-gradient-to-r ${category.color} text-white shadow-lg`
                                         : 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600'
@@ -689,7 +689,7 @@ export default function Explore() {
                                         <span className="text-sm font-medium">{category.name}</span>
                                         <span className="text-xs opacity-75">{category.count}</span>
                                     </div>
-                                </button>
+                                </Link>
                             ))}
                         </div>
 

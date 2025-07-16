@@ -4,6 +4,26 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 
+interface EducationProfessional {
+    id: number;
+    name: string;
+    specialty: string;
+    image: string;
+    rating: number;
+    reviews: number;
+    experience: string;
+    location: string;
+    consultation: string;
+    availability: string;
+    verified: boolean;
+    specializations: string[];
+    services: string[];
+    description: string;
+    type?: string;
+    realServiceId?: string;
+    realProviderId?: string;
+}
+
 export default function Education() {
     const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
     const [searchLocation, setSearchLocation] = useState('');
@@ -41,8 +61,64 @@ export default function Education() {
         }
     ];
 
-    // Education professionals data
-    const educationProfessionals = [
+    // State for real education data
+    const [educationProfessionals, setEducationProfessionals] = useState<EducationProfessional[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    // Fetch real education professionals and services
+    useEffect(() => {
+        const fetchEducationData = async () => {
+            try {
+                setLoading(true);
+                const response = await fetch('/api/explore?category=education&limit=50');
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch education data');
+                }
+
+                const data = await response.json();
+
+                if (data.success && data.items) {
+                    // Transform the data to match the expected format
+                    const transformedData = data.items.map((item: any) => ({
+                        id: item.id,
+                        name: item.name,
+                        specialty: item.type === 'professional' ? item.category.charAt(0).toUpperCase() + item.category.slice(1) : item.title,
+                        image: item.image,
+                        rating: item.rating,
+                        reviews: item.reviews || 0,
+                        experience: item.type === 'professional' ? "Professional Educator" : "Service Provider",
+                        location: item.location,
+                        consultation: item.price,
+                        availability: item.availability || item.badge,
+                        verified: item.isVerified || false,
+                        specializations: item.type === 'professional' ? (item.specialties || item.skills || []).slice(0, 3) : [item.category],
+                        services: item.type === 'professional' ? (item.specialties || item.skills || []).slice(0, 4) : [item.name],
+                        description: item.description || item.title || "Experienced education professional",
+                        type: item.type,
+                        realServiceId: item.realServiceId,
+                        realProviderId: item.realProviderId
+                    }));
+
+                    setEducationProfessionals(transformedData);
+                } else {
+                    console.error('Failed to fetch education data:', data);
+                    setError('Failed to load education professionals. Please try again later.');
+                }
+            } catch (error) {
+                console.error('Error fetching education data:', error);
+                setError('Failed to load education professionals. Please try again later.');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchEducationData();
+    }, []);
+
+    // Fallback dummy data (used only if API fails)
+    const fallbackEducationProfessionals = [
         {
             id: 1,
             name: "Dr. Akosua Mensah",
@@ -294,95 +370,136 @@ export default function Education() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {educationProfessionals.map((professional) => (
-                            <div key={professional.id} className="bg-white rounded-2xl shadow-lg border-l-4 border-indigo-500 hover:shadow-xl transition-all duration-300 overflow-hidden">
-                                <div className="p-6">
-                                    <div className="flex items-start space-x-4">
-                                        <div className="relative">
-                                            <Image
-                                                src={professional.image}
-                                                alt={professional.name}
-                                                width={80}
-                                                height={80}
-                                                className="rounded-full object-cover"
-                                            />
-                                            {professional.verified && (
-                                                <div className="absolute -bottom-1 -right-1 bg-indigo-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">
-                                                    ✓
-                                                </div>
-                                            )}
-                                        </div>
+                    {/* Loading State */}
+                    {loading && (
+                        <div className="text-center py-12">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                            <p className="text-gray-600">Loading education professionals...</p>
+                        </div>
+                    )}
 
-                                        <div className="flex-1">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <h3 className="text-xl font-bold text-gray-800">{professional.name}</h3>
-                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${professional.availability === 'Available now'
-                                                    ? 'bg-green-100 text-green-800'
-                                                    : professional.availability === 'Available today'
-                                                        ? 'bg-blue-100 text-blue-800'
-                                                        : 'bg-yellow-100 text-yellow-800'
-                                                    }`}>
-                                                    {professional.availability}
-                                                </span>
+                    {/* Error State */}
+                    {error && (
+                        <div className="text-center py-12">
+                            <div className="text-red-500 text-6xl mb-4">⚠️</div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-2">Failed to Load Data</h3>
+                            <p className="text-gray-600 mb-4">{error}</p>
+                            <button
+                                onClick={() => window.location.reload()}
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg transition-colors"
+                            >
+                                Try Again
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Empty State */}
+                    {!loading && !error && educationProfessionals.length === 0 && (
+                        <div className="text-center py-12">
+                            <div className="text-gray-400 text-6xl mb-4">📚</div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-2">No Education Professionals Found</h3>
+                            <p className="text-gray-600 mb-4">We&apos;re working to add more education professionals to our platform.</p>
+                            <Link
+                                href="/explore"
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg transition-colors inline-block"
+                            >
+                                Explore Other Categories
+                            </Link>
+                        </div>
+                    )}
+
+                    {/* Professionals Grid */}
+                    {!loading && !error && educationProfessionals.length > 0 && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            {educationProfessionals.map((professional) => (
+                                <div key={professional.id} className="bg-white rounded-2xl shadow-lg border-l-4 border-indigo-500 hover:shadow-xl transition-all duration-300 overflow-hidden">
+                                    <div className="p-6">
+                                        <div className="flex items-start space-x-4">
+                                            <div className="relative">
+                                                <Image
+                                                    src={professional.image}
+                                                    alt={professional.name}
+                                                    width={80}
+                                                    height={80}
+                                                    className="rounded-full object-cover"
+                                                />
+                                                {professional.verified && (
+                                                    <div className="absolute -bottom-1 -right-1 bg-indigo-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">
+                                                        ✓
+                                                    </div>
+                                                )}
                                             </div>
 
-                                            <p className="text-indigo-600 font-medium mb-1">{professional.specialty}</p>
-                                            <p className="text-gray-500 text-sm mb-2">📍 {professional.location} • {professional.experience} experience</p>
-
-                                            <div className="flex items-center space-x-4 mb-3">
-                                                <div className="flex items-center">
-                                                    <span className="text-yellow-400 mr-1">⭐</span>
-                                                    <span className="font-bold text-gray-800">{professional.rating}</span>
-                                                    <span className="text-gray-500 text-sm ml-1">({professional.reviews} reviews)</span>
+                                            <div className="flex-1">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <h3 className="text-xl font-bold text-gray-800">{professional.name}</h3>
+                                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${professional.availability === 'Available now'
+                                                        ? 'bg-green-100 text-green-800'
+                                                        : professional.availability === 'Available today'
+                                                            ? 'bg-blue-100 text-blue-800'
+                                                            : 'bg-yellow-100 text-yellow-800'
+                                                        }`}>
+                                                        {professional.availability}
+                                                    </span>
                                                 </div>
-                                                <div className="text-2xl font-bold text-indigo-600">{professional.consultation}</div>
-                                            </div>
 
-                                            <div className="mb-4">
-                                                <p className="text-sm text-gray-600 mb-1">Specializations:</p>
-                                                <div className="flex flex-wrap gap-1">
-                                                    {professional.specializations.map((spec, index) => (
-                                                        <span key={index} className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-xs">
-                                                            {spec}
-                                                        </span>
-                                                    ))}
+                                                <p className="text-indigo-600 font-medium mb-1">{professional.specialty}</p>
+                                                <p className="text-gray-500 text-sm mb-2">📍 {professional.location} • {professional.experience} experience</p>
+
+                                                <div className="flex items-center space-x-4 mb-3">
+                                                    <div className="flex items-center">
+                                                        <span className="text-yellow-400 mr-1">⭐</span>
+                                                        <span className="font-bold text-gray-800">{professional.rating}</span>
+                                                        <span className="text-gray-500 text-sm ml-1">({professional.reviews} reviews)</span>
+                                                    </div>
+                                                    <div className="text-2xl font-bold text-indigo-600">{professional.consultation}</div>
                                                 </div>
-                                            </div>
 
-                                            <div className="mb-4">
-                                                <p className="text-sm text-gray-600 mb-1">Services:</p>
-                                                <div className="flex flex-wrap gap-1">
-                                                    {professional.services.slice(0, 3).map((service, index) => (
-                                                        <span key={index} className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
-                                                            {service}
-                                                        </span>
-                                                    ))}
-                                                    {professional.services.length > 3 && (
-                                                        <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
-                                                            +{professional.services.length - 3} more
-                                                        </span>
-                                                    )}
+                                                <div className="mb-4">
+                                                    <p className="text-sm text-gray-600 mb-1">Specializations:</p>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {professional.specializations.map((spec, index) => (
+                                                            <span key={index} className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-xs">
+                                                                {spec}
+                                                            </span>
+                                                        ))}
+                                                    </div>
                                                 </div>
-                                            </div>
 
-                                            <div className="flex space-x-3">
-                                                <Link
-                                                    href={`/education/professional/${professional.id}`}
-                                                    className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-2 px-4 rounded-lg font-bold text-center hover:from-indigo-700 hover:to-purple-700 transition-all duration-300"
-                                                >
-                                                    View Profile & Book
-                                                </Link>
-                                                <button className="border border-indigo-600 text-indigo-600 py-2 px-4 rounded-lg font-bold hover:bg-indigo-50 transition-colors">
-                                                    📞 Call
-                                                </button>
+                                                <div className="mb-4">
+                                                    <p className="text-sm text-gray-600 mb-1">Services:</p>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {professional.services.slice(0, 3).map((service, index) => (
+                                                            <span key={index} className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
+                                                                {service}
+                                                            </span>
+                                                        ))}
+                                                        {professional.services.length > 3 && (
+                                                            <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
+                                                                +{professional.services.length - 3} more
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex space-x-3">
+                                                    <Link
+                                                        href={`/education/professional/${professional.id}`}
+                                                        className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-2 px-4 rounded-lg font-bold text-center hover:from-indigo-700 hover:to-purple-700 transition-all duration-300"
+                                                    >
+                                                        View Profile & Book
+                                                    </Link>
+                                                    <button className="border border-indigo-600 text-indigo-600 py-2 px-4 rounded-lg font-bold hover:bg-indigo-50 transition-colors">
+                                                        📞 Call
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    )}
 
                     <div className="text-center mt-12">
                         <button className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-8 py-3 rounded-lg font-bold transition-colors">
