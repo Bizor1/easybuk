@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useAuth } from '@/contexts/AuthContext';
+import NotificationBell from '@/components/NotificationBell';
 
 interface HealthcareProfessional {
     id: number;
@@ -64,6 +66,9 @@ export default function Healthcare() {
     const [healthcareProfessionals, setHealthcareProfessionals] = useState<HealthcareProfessional[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    // Get authentication state
+    const { user, logout, loading: authLoading } = useAuth();
 
     // Fetch real healthcare professionals and services
     useEffect(() => {
@@ -141,8 +146,58 @@ export default function Healthcare() {
 
                         <div className="flex items-center space-x-4">
                             <Link href="/" className="text-gray-700 hover:text-blue-600 transition-colors">← Back to Home</Link>
-                            <Link href="/auth/signin" className="text-gray-700 hover:text-blue-600 transition-colors">Sign In</Link>
-                            <Link href="/auth/signup?role=provider" className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white px-4 py-2 rounded-lg transition-all duration-300">Sign Up</Link>
+
+                            {/* Authentication Section */}
+                            {authLoading ? (
+                                <div className="animate-pulse bg-gray-200 h-10 w-20 rounded-lg"></div>
+                            ) : user ? (
+                                <div className="flex items-center space-x-3">
+                                    {/* Notification Bell */}
+                                    <NotificationBell userType={user.roles.includes('PROVIDER') ? 'PROVIDER' : 'CLIENT'} />
+
+                                    <div className="flex items-center space-x-2">
+                                        <Image
+                                            src={user.image || '/default-avatar.svg'}
+                                            alt={user.name || 'User'}
+                                            width={32}
+                                            height={32}
+                                            className="w-8 h-8 rounded-full"
+                                        />
+                                        <div className="relative group">
+                                            <button className="flex items-center space-x-1 text-gray-700 hover:text-blue-600 transition-colors">
+                                                <span className="text-sm font-medium">{user.name}</span>
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </button>
+
+                                            <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                                                <div className="py-2">
+                                                    <Link
+                                                        href={user.roles.includes('PROVIDER') ? '/provider/dashboard' : '/client/dashboard'}
+                                                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                                                    >
+                                                        Dashboard
+                                                    </Link>
+                                                    <button
+                                                        onClick={logout}
+                                                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                                    >
+                                                        Sign Out
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex items-center space-x-3">
+                                    <Link href="/auth/login" className="text-gray-700 hover:text-blue-600 transition-colors">Sign In</Link>
+                                    <Link href="/auth/signup" className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-2 rounded-lg transition-all duration-300">Sign Up</Link>
+                                    <Link href="/auth/signup?role=provider" className="border border-blue-600 text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg transition-colors">For Providers</Link>
+                                </div>
+                            )}
+
                             <Link href="/contact" className="btn-secondary">Contact Us</Link>
                         </div>
                     </div>
