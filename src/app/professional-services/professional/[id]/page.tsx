@@ -62,7 +62,7 @@ export default function ProfessionalServicesProfessional() {
                     id: data.id,
                     name: data.name,
                     specialty: data.category || 'Professional Service Provider',
-                    image: data.profileImage || "https://images.unsplash.com/photo-1594824724159-9d0d18e2d4d1?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
+                    image: data.profileImage || "https://res.cloudinary.com/duhfv8nqy/image/upload/v1733764031/default-avatar_cugq40.png",
                     rating: data.rating || 4.5,
                     reviews: data.totalReviews || 0,
                     experience: `${data.experience || 10} years`,

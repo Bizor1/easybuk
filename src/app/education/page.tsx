@@ -155,7 +155,7 @@ export default function Education() {
             id: 3,
             name: "Ms. Sarah Osei",
             specialty: "English Language Specialist",
-            image: "https://images.unsplash.com/photo-1494790108755-2616b612b282?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
+            image: "https://res.cloudinary.com/duhfv8nqy/image/upload/v1733764031/default-avatar_cugq40.png",
             rating: 4.9,
             reviews: 156,
             experience: "12 years",
@@ -182,6 +182,22 @@ export default function Education() {
             specializations: ["MBA Prep", "Financial Analysis", "Economics"],
             services: ["University Admission", "Research Guidance", "Thesis Support", "Career Counseling"],
             description: "University professor with extensive experience in business education and research supervision."
+        },
+        {
+            id: 5,
+            name: "Grace Asante",
+            specialty: "Mathematics Tutor",
+            image: "https://res.cloudinary.com/duhfv8nqy/image/upload/v1733764031/default-avatar_cugq40.png",
+            rating: 4.9,
+            reviews: 127,
+            experience: "6 years",
+            location: "Accra",
+            consultation: "GH₵40/hour",
+            availability: "Available today",
+            verified: true,
+            specializations: ["Mathematics", "Physics", "Statistics"],
+            services: ["Individual Tutoring", "Group Classes", "Exam Preparation", "Assignment Help"],
+            description: "Experienced mathematics tutor specializing in high school and university level math.",
         }
     ];
 

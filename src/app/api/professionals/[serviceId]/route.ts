@@ -172,7 +172,7 @@ export async function GET(request: NextRequest, { params }: { params: { serviceI
             businessName: provider.businessName || provider.name,
             categorySpecialty: service.name, // The specific service clicked
             category: provider.category,
-            profilePicture: user?.image || provider.image || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+            profilePicture: user?.image || provider.image || 'https://res.cloudinary.com/duhfv8nqy/image/upload/v1733764031/default-avatar_cugq40.png',
             averageRating: Math.round(avgRating * 10) / 10,
             totalReviews: provider.Review.length,
             yearsOfExperience: provider.experience ? parseInt(provider.experience) : null,

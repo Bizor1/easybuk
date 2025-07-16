@@ -224,7 +224,7 @@ export default function Home() {
     {
       name: "Amina Hassan",
       role: "Client, Dar es Salaam",
-      image: "https://images.unsplash.com/photo-1494790108755-2616b612b282?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80",
+      image: "https://res.cloudinary.com/duhfv8nqy/image/upload/v1733764031/default-avatar_cugq40.png",
       quote: "Found an amazing tutor for my daughter within minutes. The quality of professionals on EasyBuk is outstanding."
     }
   ];

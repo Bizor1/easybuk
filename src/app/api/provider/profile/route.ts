@@ -160,7 +160,7 @@ export async function GET(request: NextRequest) {
             name: user.name || provider.name || '',
             email: user.email || '',
             phone: user.phone || provider.phone || '',
-            image: user.image || provider.image || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80',
+            image: user.image || provider.image || 'https://res.cloudinary.com/duhfv8nqy/image/upload/v1733764031/default-avatar_cugq40.png',
             bio: provider.bio || '',
             location: provider.city || '',
             experience: provider.experience ? parseInt(provider.experience) : 0,

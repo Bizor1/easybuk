@@ -59,7 +59,7 @@ export default function EducationProfessional() {
                     id: data.id,
                     name: data.name,
                     specialty: data.category || 'Education Professional',
-                    image: data.profileImage || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
+                    image: data.profileImage || "https://res.cloudinary.com/duhfv8nqy/image/upload/v1733764031/default-avatar_cugq40.png",
                     rating: data.rating || 4.5,
                     reviews: data.totalReviews || 0,
                     experience: `${data.experience || 5} years`,

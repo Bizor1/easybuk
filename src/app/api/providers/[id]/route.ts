@@ -146,7 +146,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
             id: provider.id,
             name: user?.name || provider.name || '',
             specialty: provider.category || 'Professional Service',
-            image: user?.image || provider.image || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+            image: user?.image || provider.image || 'https://res.cloudinary.com/duhfv8nqy/image/upload/v1733764031/default-avatar_cugq40.png',
             rating: Math.round(avgRating * 10) / 10,
             reviews: provider.Review.length,
             experience: provider.experience || '5+ years',
