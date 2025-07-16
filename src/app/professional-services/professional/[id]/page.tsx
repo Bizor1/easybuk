@@ -4,12 +4,14 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
+import BookingForm from '@/components/BookingForm';
 
 export default function ProfessionalServicesProfessional() {
     const params = useParams();
     const [selectedDate, setSelectedDate] = useState('');
     const [selectedTime, setSelectedTime] = useState('');
     const [consultationType, setConsultationType] = useState('virtual');
+    const [showBookingForm, setShowBookingForm] = useState(false);
 
     // Mock professional data - in real app, fetch based on params.id
     const professional = {
@@ -61,6 +63,34 @@ export default function ProfessionalServicesProfessional() {
     const availableSlots = [
         "9:00 AM", "11:00 AM", "2:00 PM", "4:00 PM"
     ];
+
+    // Service data for BookingForm
+    const serviceData = {
+        id: professional.id.toString(),
+        title: `${professional.specialty} Consultation`,
+        description: professional.about,
+        basePrice: parseInt(professional.consultation.replace(/[^0-9]/g, '')),
+        currency: 'GHS',
+        pricingType: 'hourly' as const,
+        duration: 1,
+        durationUnit: 'hour',
+        supportedBookingTypes: ['VIDEO_CALL', 'IN_PERSON'] as ('IN_PERSON' | 'REMOTE' | 'VIDEO_CALL' | 'PHONE_CALL')[],
+        provider: {
+            id: professional.id.toString(),
+            name: professional.name,
+            rating: professional.rating
+        }
+    };
+
+    const handleBookingComplete = (bookingData: any) => {
+        console.log('Booking completed:', bookingData);
+        setShowBookingForm(false);
+        // Handle successful booking (redirect, show success message, etc.)
+    };
+
+    const handleCloseBooking = () => {
+        setShowBookingForm(false);
+    };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50">
@@ -224,74 +254,49 @@ export default function ProfessionalServicesProfessional() {
                             <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-24">
                                 <h3 className="text-2xl font-bold text-gray-800 mb-6">💼 Book Consultation</h3>
 
-                                {/* Consultation Type */}
-                                <div className="mb-6">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Consultation Type</label>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <button
-                                            onClick={() => setConsultationType('virtual')}
-                                            className={`p-3 rounded-lg border text-center ${consultationType === 'virtual'
-                                                ? 'bg-purple-600 text-white border-purple-600'
-                                                : 'bg-gray-50 text-gray-700 border-gray-300'}`}
-                                        >
-                                            💻 Virtual
-                                        </button>
-                                        <button
-                                            onClick={() => setConsultationType('in-person')}
-                                            className={`p-3 rounded-lg border text-center ${consultationType === 'in-person'
-                                                ? 'bg-purple-600 text-white border-purple-600'
-                                                : 'bg-gray-50 text-gray-700 border-gray-300'}`}
-                                        >
-                                            🏢 In-Person
-                                        </button>
+                                {/* Professional Summary */}
+                                <div className="mb-6 p-4 bg-purple-50 rounded-lg">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className="text-gray-700">Consultation Fee</span>
+                                        <span className="text-2xl font-bold text-purple-600">{professional.consultation}</span>
+                                    </div>
+                                    <p className="text-sm text-gray-600">Per hour • Initial consultation</p>
+                                    <div className="flex items-center mt-2">
+                                        <span className="text-yellow-400 mr-1">⭐</span>
+                                        <span className="font-medium text-gray-800">{professional.rating}</span>
+                                        <span className="text-gray-500 text-sm ml-1">({professional.reviews} reviews)</span>
                                     </div>
                                 </div>
 
-                                {/* Date Selection */}
+                                {/* Service Options */}
                                 <div className="mb-6">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Select Date</label>
-                                    <input
-                                        type="date"
-                                        value={selectedDate}
-                                        onChange={(e) => setSelectedDate(e.target.value)}
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                    />
-                                </div>
-
-                                {/* Time Selection */}
-                                <div className="mb-6">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Available Times</label>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        {availableSlots.map((time) => (
-                                            <button
-                                                key={time}
-                                                onClick={() => setSelectedTime(time)}
-                                                className={`p-2 rounded-lg border text-sm ${selectedTime === time
-                                                    ? 'bg-purple-600 text-white border-purple-600'
-                                                    : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100'}`}
-                                            >
-                                                {time}
-                                            </button>
+                                    <h4 className="font-medium text-gray-700 mb-3">Available Services:</h4>
+                                    <div className="space-y-2">
+                                        {professional.services.slice(0, 3).map((service, index) => (
+                                            <div key={index} className="flex items-center text-sm text-gray-600">
+                                                <span className="w-2 h-2 bg-purple-500 rounded-full mr-2"></span>
+                                                {service}
+                                            </div>
                                         ))}
                                     </div>
                                 </div>
 
-                                {/* Consultation Fee */}
-                                <div className="mb-6 p-4 bg-purple-50 rounded-lg">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-gray-700">Consultation Fee</span>
-                                        <span className="text-2xl font-bold text-purple-600">{professional.consultation}</span>
-                                    </div>
-                                    <p className="text-xs text-gray-500 mt-1">Per hour • Initial consultation</p>
-                                </div>
-
                                 {/* Book Button */}
                                 <button
-                                    disabled={!selectedDate || !selectedTime}
-                                    className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-4 rounded-lg font-bold text-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    onClick={() => setShowBookingForm(true)}
+                                    className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-4 rounded-lg font-bold text-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
                                 >
-                                    💳 Book & Pay Now
+                                    💳 Book Consultation
                                 </button>
+
+                                <div className="grid grid-cols-2 gap-3 mt-4">
+                                    <button className="bg-white border-2 border-purple-600 text-purple-600 py-2 px-4 rounded-lg font-medium hover:bg-purple-50 transition-colors">
+                                        💬 Send Message
+                                    </button>
+                                    <button className="bg-white border-2 border-purple-600 text-purple-600 py-2 px-4 rounded-lg font-medium hover:bg-purple-50 transition-colors">
+                                        📞 Call Office
+                                    </button>
+                                </div>
 
                                 {/* Law Firm Info */}
                                 <div className="mt-6 p-4 bg-gray-50 rounded-lg">
@@ -305,6 +310,16 @@ export default function ProfessionalServicesProfessional() {
                     </div>
                 </div>
             </section>
+
+            {/* Booking Form Modal */}
+            {showBookingForm && (
+                <BookingForm
+                    service={serviceData}
+                    category="professional"
+                    onBookingComplete={handleBookingComplete}
+                    onClose={handleCloseBooking}
+                />
+            )}
         </div>
     );
 } 

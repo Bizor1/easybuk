@@ -52,6 +52,7 @@ interface BookingFormProps {
             maxDistance: number;
         };
     };
+    category?: 'healthcare' | 'education' | 'creative' | 'technical' | 'professional' | 'home';
     onBookingComplete: (bookingData: any) => void;
     onClose: () => void;
 }
@@ -83,7 +84,7 @@ interface BookingData {
     paymentMethod: 'card' | 'momo' | 'bank_transfer';
 }
 
-export default function BookingForm({ service, onBookingComplete, onClose }: BookingFormProps) {
+export default function BookingForm({ service, category = 'professional', onBookingComplete, onClose }: BookingFormProps) {
     const [currentStep, setCurrentStep] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
@@ -92,6 +93,84 @@ export default function BookingForm({ service, onBookingComplete, onClose }: Boo
     const [availableSlots, setAvailableSlots] = useState<DaySlot[]>([]);
 
     const [selectedHours, setSelectedHours] = useState(1); // New state for hours
+
+    // Category-specific color schemes with complete class names
+    const categoryStyles = {
+        healthcare: {
+            primary: 'bg-blue-600 text-white',
+            primaryHover: 'hover:bg-blue-700',
+            button: 'bg-blue-600 hover:bg-blue-700 text-white',
+            light: 'bg-blue-50',
+            border: 'border-blue-200',
+            lightBorder: 'bg-blue-50 border-blue-200',
+            text: 'text-blue-700',
+            selected: 'border-blue-500 bg-blue-50 text-blue-700',
+            stepIndicator: 'bg-blue-600 text-white',
+            accent: 'bg-blue-100'
+        },
+        education: {
+            primary: 'bg-indigo-600 text-white',
+            primaryHover: 'hover:bg-indigo-700',
+            button: 'bg-indigo-600 hover:bg-indigo-700 text-white',
+            light: 'bg-indigo-50',
+            border: 'border-indigo-200',
+            lightBorder: 'bg-indigo-50 border-indigo-200',
+            text: 'text-indigo-700',
+            selected: 'border-indigo-500 bg-indigo-50 text-indigo-700',
+            stepIndicator: 'bg-indigo-600 text-white',
+            accent: 'bg-indigo-100'
+        },
+        creative: {
+            primary: 'bg-pink-600 text-white',
+            primaryHover: 'hover:bg-pink-700',
+            button: 'bg-pink-600 hover:bg-pink-700 text-white',
+            light: 'bg-pink-50',
+            border: 'border-pink-200',
+            lightBorder: 'bg-pink-50 border-pink-200',
+            text: 'text-pink-700',
+            selected: 'border-pink-500 bg-pink-50 text-pink-700',
+            stepIndicator: 'bg-pink-600 text-white',
+            accent: 'bg-pink-100'
+        },
+        technical: {
+            primary: 'bg-orange-600 text-white',
+            primaryHover: 'hover:bg-orange-700',
+            button: 'bg-orange-600 hover:bg-orange-700 text-white',
+            light: 'bg-orange-50',
+            border: 'border-orange-200',
+            lightBorder: 'bg-orange-50 border-orange-200',
+            text: 'text-orange-700',
+            selected: 'border-orange-500 bg-orange-50 text-orange-700',
+            stepIndicator: 'bg-orange-600 text-white',
+            accent: 'bg-orange-100'
+        },
+        professional: {
+            primary: 'bg-purple-600 text-white',
+            primaryHover: 'hover:bg-purple-700',
+            button: 'bg-purple-600 hover:bg-purple-700 text-white',
+            light: 'bg-purple-50',
+            border: 'border-purple-200',
+            lightBorder: 'bg-purple-50 border-purple-200',
+            text: 'text-purple-700',
+            selected: 'border-purple-500 bg-purple-50 text-purple-700',
+            stepIndicator: 'bg-purple-600 text-white',
+            accent: 'bg-purple-100'
+        },
+        home: {
+            primary: 'bg-emerald-600 text-white',
+            primaryHover: 'hover:bg-emerald-700',
+            button: 'bg-emerald-600 hover:bg-emerald-700 text-white',
+            light: 'bg-emerald-50',
+            border: 'border-emerald-200',
+            lightBorder: 'bg-emerald-50 border-emerald-200',
+            text: 'text-emerald-700',
+            selected: 'border-emerald-500 bg-emerald-50 text-emerald-700',
+            stepIndicator: 'bg-emerald-600 text-white',
+            accent: 'bg-emerald-100'
+        }
+    };
+
+    const styles = categoryStyles[category];
 
     // Booking type display information
     const bookingTypeIcons: Record<string, string> = {
@@ -400,7 +479,7 @@ ${result.nextSteps?.forClient || 'Wait for provider response'}
             <div className="bg-gray-50 p-4 rounded-lg">
                 <div className="flex items-start space-x-4">
                     <div className="flex-shrink-0">
-                        <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
+                        <div className={`w-12 h-12 ${styles.stepIndicator} rounded-full flex items-center justify-center font-semibold`}>
                             {service.provider.name.charAt(0)}
                         </div>
                     </div>
@@ -428,7 +507,7 @@ ${result.nextSteps?.forClient || 'Wait for provider response'}
                                 key={hours}
                                 onClick={() => handleHourChange(hours)}
                                 className={`p-3 rounded-lg border-2 transition-all ${selectedHours === hours
-                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                    ? styles.selected
                                     : 'border-gray-200 hover:border-blue-300 text-gray-700'
                                     }`}
                             >
@@ -859,7 +938,7 @@ ${result.nextSteps?.forClient || 'Wait for provider response'}
             <div className="pt-4 space-y-3">
                 <button
                     onClick={onClose}
-                    className="w-full px-6 py-3 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 transition-colors"
+                    className={`w-full px-6 py-3 text-sm font-medium border border-transparent rounded-md transition-colors ${styles.button}`}
                 >
                     Got it, Close
                 </button>

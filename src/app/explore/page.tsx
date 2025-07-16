@@ -286,7 +286,8 @@ export default function Explore() {
                 id: providerId,  // Use real provider ID from database
                 name: (item as any).provider || 'Professional Provider',
                 rating: (item as any).rating || 4.5
-            }
+            },
+            category: item.category // Add category for modal styling
         };
 
         console.log('Service data with booking types:', serviceData);
@@ -1181,9 +1182,10 @@ export default function Explore() {
             </div>
 
             {/* Booking Form */}
-            {showBookingForm && (
+            {showBookingForm && selectedService && (
                 <BookingForm
                     service={selectedService}
+                    category={selectedService.category?.toLowerCase() as any || 'professional'}
                     onBookingComplete={handleBookingComplete}
                     onClose={handleCloseBooking}
                 />
