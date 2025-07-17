@@ -28,12 +28,27 @@ export default function HomeServices() {
     const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
     const [searchLocation, setSearchLocation] = useState('');
     const [searchService, setSearchService] = useState('');
+    const [searchBudget, setSearchBudget] = useState('');
+    const [searchKeywords, setSearchKeywords] = useState('');
     const [homeServiceProfessionals, setHomeServiceProfessionals] = useState<HomeServiceProfessional[]>([]);
+    const [filteredProfessionals, setFilteredProfessionals] = useState<HomeServiceProfessional[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     // Get authentication state
     const { user, logout, loading: authLoading } = useAuth();
+
+    // Ghana cities for location dropdown
+    const ghanaCities = [
+        'accra', 'kumasi', 'tamale', 'takoradi', 'tema', 'cape-coast',
+        'ho', 'sunyani', 'koforidua', 'wa', 'bolgatanga', 'techiman'
+    ];
+
+    // Home service categories
+    const homeServiceCategories = [
+        'cleaning', 'plumbing', 'electrical', 'gardening', 'painting',
+        'carpentry', 'appliance-repair', 'pest-control', 'security', 'moving'
+    ];
 
     // Banner carousel data with home service themes
     const bannerAds = [
@@ -66,6 +81,72 @@ export default function HomeServices() {
             action: "Design Now"
         }
     ];
+
+    // Filter professionals based on search criteria
+    const filterProfessionals = () => {
+        let filtered = [...homeServiceProfessionals];
+
+        // Filter by location
+        if (searchLocation) {
+            filtered = filtered.filter(prof =>
+                prof.location.toLowerCase().includes(searchLocation.toLowerCase())
+            );
+        }
+
+        // Filter by service type
+        if (searchService) {
+            filtered = filtered.filter(prof =>
+                prof.specialty.toLowerCase().includes(searchService.toLowerCase()) ||
+                prof.services.some(service =>
+                    service.toLowerCase().includes(searchService.toLowerCase())
+                ) ||
+                prof.specializations.some(spec =>
+                    spec.toLowerCase().includes(searchService.toLowerCase())
+                )
+            );
+        }
+
+        // Filter by budget
+        if (searchBudget) {
+            const budgetValue = parseFloat(searchBudget.replace(/[^\d.]/g, ''));
+            if (!isNaN(budgetValue)) {
+                filtered = filtered.filter(prof => {
+                    const profPrice = parseFloat(prof.consultation.replace(/[^\d.]/g, ''));
+                    return !isNaN(profPrice) && profPrice <= budgetValue;
+                });
+            }
+        }
+
+        // Filter by keywords
+        if (searchKeywords.trim()) {
+            const keywords = searchKeywords.toLowerCase().split(' ');
+            filtered = filtered.filter(prof =>
+                keywords.some(keyword =>
+                    prof.name.toLowerCase().includes(keyword) ||
+                    prof.description.toLowerCase().includes(keyword) ||
+                    prof.specialty.toLowerCase().includes(keyword) ||
+                    prof.services.some(service => service.toLowerCase().includes(keyword)) ||
+                    prof.specializations.some(spec => spec.toLowerCase().includes(keyword))
+                )
+            );
+        }
+
+        setFilteredProfessionals(filtered);
+    };
+
+    // Handle search button click
+    const handleSearch = () => {
+        filterProfessionals();
+    };
+
+    // Reset filters
+    const handleResetFilters = () => {
+        setSearchLocation('');
+        setSearchService('');
+        setSearchBudget('');
+        setSearchKeywords('');
+        setFilteredProfessionals(homeServiceProfessionals);
+    };
 
     // Fetch home service professionals from API
     useEffect(() => {
@@ -102,6 +183,7 @@ export default function HomeServices() {
                 }));
 
                 setHomeServiceProfessionals(transformedData);
+                setFilteredProfessionals(transformedData); // Initialize filtered professionals
                 setError(null);
             } catch (err) {
                 console.error('Error fetching home service professionals:', err);
@@ -264,7 +346,7 @@ export default function HomeServices() {
                                 <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent rounded-2xl"></div>
 
                                 <div className="relative z-10">
-                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
                                         <div className="space-y-2">
                                             <div className="relative">
                                                 <select
@@ -273,10 +355,9 @@ export default function HomeServices() {
                                                     className="w-full px-4 py-4 pr-10 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder-white/60 focus:ring-2 focus:ring-green-400/50 focus:border-white/40 transition-all duration-300 hover:bg-white/15 appearance-none cursor-pointer"
                                                 >
                                                     <option value="" className="bg-gray-800 text-white">📍 Select Location</option>
-                                                    <option value="accra" className="bg-gray-800 text-white">Accra</option>
-                                                    <option value="kumasi" className="bg-gray-800 text-white">Kumasi</option>
-                                                    <option value="tamale" className="bg-gray-800 text-white">Tamale</option>
-                                                    <option value="tema" className="bg-gray-800 text-white">Tema</option>
+                                                    {ghanaCities.map((city) => (
+                                                        <option key={city} value={city} className="bg-gray-800 text-white">{city.charAt(0).toUpperCase() + city.slice(1)}</option>
+                                                    ))}
                                                 </select>
                                                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                                                     <svg className="w-5 h-5 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -294,10 +375,9 @@ export default function HomeServices() {
                                                     className="w-full px-4 py-4 pr-10 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder-white/60 focus:ring-2 focus:ring-green-400/50 focus:border-white/40 transition-all duration-300 hover:bg-white/15 appearance-none cursor-pointer"
                                                 >
                                                     <option value="" className="bg-gray-800 text-white">🏠 Home Service</option>
-                                                    <option value="cleaning" className="bg-gray-800 text-white">Professional Cleaning</option>
-                                                    <option value="plumbing" className="bg-gray-800 text-white">Plumbing</option>
-                                                    <option value="electrical" className="bg-gray-800 text-white">Electrical</option>
-                                                    <option value="gardening" className="bg-gray-800 text-white">Gardening</option>
+                                                    {homeServiceCategories.map((category) => (
+                                                        <option key={category} value={category} className="bg-gray-800 text-white">{category.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</option>
+                                                    ))}
                                                 </select>
                                                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                                                     <svg className="w-5 h-5 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -312,15 +392,38 @@ export default function HomeServices() {
                                                 <input
                                                     type="text"
                                                     placeholder="💰 Budget (e.g., GH₵50-70)"
+                                                    value={searchBudget}
+                                                    onChange={(e) => setSearchBudget(e.target.value)}
                                                     className="w-full px-4 py-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder-white/60 focus:ring-2 focus:ring-green-400/50 focus:border-white/40 transition-all duration-300 hover:bg-white/15"
                                                 />
                                             </div>
                                         </div>
 
-                                        <div>
-                                            <button className="w-full bg-gradient-to-r from-green-500/80 to-blue-500/80 backdrop-blur-md text-white py-4 px-6 rounded-xl font-bold text-lg hover:from-green-600/90 hover:to-blue-600/90 transition-all duration-300 hover:scale-105 shadow-lg flex items-center justify-center space-x-2 border border-white/20">
+                                        <div className="space-y-2">
+                                            <div className="relative">
+                                                <input
+                                                    type="text"
+                                                    placeholder="🔍 Keywords (e.g., electrician, plumber)"
+                                                    value={searchKeywords}
+                                                    onChange={(e) => setSearchKeywords(e.target.value)}
+                                                    className="w-full px-4 py-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder-white/60 focus:ring-2 focus:ring-green-400/50 focus:border-white/40 transition-all duration-300 hover:bg-white/15"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="md:col-span-1 space-y-4">
+                                            <button
+                                                onClick={handleSearch}
+                                                className="w-full bg-gradient-to-r from-green-500/80 to-blue-500/80 backdrop-blur-md text-white py-4 px-6 rounded-xl font-bold text-lg hover:from-green-600/90 hover:to-blue-600/90 transition-all duration-300 hover:scale-105 shadow-lg flex items-center justify-center space-x-2 border border-white/20"
+                                            >
                                                 <span>🔍</span>
                                                 <span>Find Services</span>
+                                            </button>
+                                            <button
+                                                onClick={handleResetFilters}
+                                                className="w-full bg-white/20 backdrop-blur-md text-white py-2 px-4 rounded-xl font-medium hover:bg-white/30 transition-colors border border-white/20"
+                                            >
+                                                Reset
                                             </button>
                                         </div>
                                     </div>
@@ -337,7 +440,13 @@ export default function HomeServices() {
                     <div className="flex justify-between items-center mb-12">
                         <div>
                             <h2 className="text-4xl font-bold mb-4 text-gray-800">Available Home Service Professionals</h2>
-                            <p className="text-xl text-gray-600">Trusted experts for all your home maintenance needs</p>
+                            <p className="text-xl text-gray-600">
+                                {filteredProfessionals.length > 0 ?
+                                    `Found ${filteredProfessionals.length} professional${filteredProfessionals.length !== 1 ? 's' : ''} ${(searchLocation || searchService || searchBudget || searchKeywords) ? 'matching your criteria' : 'available'
+                                    }` :
+                                    'Trusted experts for all your home maintenance needs'
+                                }
+                            </p>
                         </div>
                         <div className="flex items-center space-x-4">
                             <select className="px-4 py-2 border border-gray-300 rounded-lg">
@@ -364,13 +473,13 @@ export default function HomeServices() {
                                 Try Again
                             </button>
                         </div>
-                    ) : homeServiceProfessionals.length === 0 ? (
+                    ) : filteredProfessionals.length === 0 ? (
                         <div className="text-center py-12">
-                            <p className="text-gray-600">No home service professionals found.</p>
+                            <p className="text-gray-600">No home service professionals found matching your criteria.</p>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            {homeServiceProfessionals.map((professional) => (
+                            {filteredProfessionals.map((professional) => (
                                 <div key={professional.id} className="bg-white rounded-2xl shadow-lg border-l-4 border-green-500 hover:shadow-xl transition-all duration-300 overflow-hidden">
                                     <div className="p-6">
                                         <div className="flex items-start space-x-4">

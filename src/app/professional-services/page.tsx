@@ -28,12 +28,93 @@ export default function ProfessionalServices() {
     const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
     const [searchLocation, setSearchLocation] = useState('');
     const [searchService, setSearchService] = useState('');
+    const [searchBudget, setSearchBudget] = useState('');
+    const [searchKeywords, setSearchKeywords] = useState('');
     const [professionalServiceProviders, setProfessionalServiceProviders] = useState<ProfessionalServiceProvider[]>([]);
+    const [filteredProviders, setFilteredProviders] = useState<ProfessionalServiceProvider[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     // Get authentication state
     const { user, logout, loading: authLoading } = useAuth();
+
+    // Ghana cities for location dropdown
+    const ghanaCities = [
+        'accra', 'kumasi', 'tamale', 'takoradi', 'tema', 'cape-coast',
+        'ho', 'sunyani', 'koforidua', 'wa', 'bolgatanga', 'techiman'
+    ];
+
+    // Professional service categories
+    const professionalServiceCategories = [
+        'legal', 'accounting', 'consulting', 'marketing', 'finance',
+        'real-estate', 'insurance', 'business-development', 'hr', 'audit'
+    ];
+
+    // Filter providers based on search criteria
+    const filterProviders = () => {
+        let filtered = [...professionalServiceProviders];
+
+        // Filter by location
+        if (searchLocation) {
+            filtered = filtered.filter(provider =>
+                provider.location.toLowerCase().includes(searchLocation.toLowerCase())
+            );
+        }
+
+        // Filter by service type
+        if (searchService) {
+            filtered = filtered.filter(provider =>
+                provider.specialty.toLowerCase().includes(searchService.toLowerCase()) ||
+                provider.services.some(service =>
+                    service.toLowerCase().includes(searchService.toLowerCase())
+                ) ||
+                provider.specializations.some(spec =>
+                    spec.toLowerCase().includes(searchService.toLowerCase())
+                )
+            );
+        }
+
+        // Filter by budget
+        if (searchBudget) {
+            const budgetValue = parseFloat(searchBudget.replace(/[^\d.]/g, ''));
+            if (!isNaN(budgetValue)) {
+                filtered = filtered.filter(provider => {
+                    const providerPrice = parseFloat(provider.consultation.replace(/[^\d.]/g, ''));
+                    return !isNaN(providerPrice) && providerPrice <= budgetValue;
+                });
+            }
+        }
+
+        // Filter by keywords
+        if (searchKeywords.trim()) {
+            const keywords = searchKeywords.toLowerCase().split(' ');
+            filtered = filtered.filter(provider =>
+                keywords.some(keyword =>
+                    provider.name.toLowerCase().includes(keyword) ||
+                    provider.description.toLowerCase().includes(keyword) ||
+                    provider.specialty.toLowerCase().includes(keyword) ||
+                    provider.services.some(service => service.toLowerCase().includes(keyword)) ||
+                    provider.specializations.some(spec => spec.toLowerCase().includes(keyword))
+                )
+            );
+        }
+
+        setFilteredProviders(filtered);
+    };
+
+    // Handle search button click
+    const handleSearch = () => {
+        filterProviders();
+    };
+
+    // Reset filters
+    const handleResetFilters = () => {
+        setSearchLocation('');
+        setSearchService('');
+        setSearchBudget('');
+        setSearchKeywords('');
+        setFilteredProviders(professionalServiceProviders);
+    };
 
     // Banner carousel data with professional service themes
     const bannerAds = useMemo(() => [
@@ -102,6 +183,7 @@ export default function ProfessionalServices() {
                 }));
 
                 setProfessionalServiceProviders(transformedData);
+                setFilteredProviders(transformedData); // Initialize filtered providers
                 setError(null);
             } catch (err) {
                 console.error('Error fetching professional service providers:', err);
@@ -264,7 +346,7 @@ export default function ProfessionalServices() {
                                 <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent rounded-2xl"></div>
 
                                 <div className="relative z-10">
-                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
                                         <div className="space-y-2">
                                             <div className="relative">
                                                 <select
@@ -273,10 +355,9 @@ export default function ProfessionalServices() {
                                                     className="w-full px-4 py-4 pr-10 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder-white/60 focus:ring-2 focus:ring-purple-400/50 focus:border-white/40 transition-all duration-300 hover:bg-white/15 appearance-none cursor-pointer"
                                                 >
                                                     <option value="" className="bg-gray-800 text-white">📍 Select Location</option>
-                                                    <option value="accra" className="bg-gray-800 text-white">Accra</option>
-                                                    <option value="kumasi" className="bg-gray-800 text-white">Kumasi</option>
-                                                    <option value="tamale" className="bg-gray-800 text-white">Tamale</option>
-                                                    <option value="tema" className="bg-gray-800 text-white">Tema</option>
+                                                    {ghanaCities.map((city) => (
+                                                        <option key={city} value={city} className="bg-gray-800 text-white">{city.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</option>
+                                                    ))}
                                                 </select>
                                                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                                                     <svg className="w-5 h-5 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -294,10 +375,9 @@ export default function ProfessionalServices() {
                                                     className="w-full px-4 py-4 pr-10 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder-white/60 focus:ring-2 focus:ring-purple-400/50 focus:border-white/40 transition-all duration-300 hover:bg-white/15 appearance-none cursor-pointer"
                                                 >
                                                     <option value="" className="bg-gray-800 text-white">💼 Professional Service</option>
-                                                    <option value="legal" className="bg-gray-800 text-white">Legal Advisory</option>
-                                                    <option value="accounting" className="bg-gray-800 text-white">Accounting</option>
-                                                    <option value="consulting" className="bg-gray-800 text-white">Business Consulting</option>
-                                                    <option value="hr" className="bg-gray-800 text-white">HR Services</option>
+                                                    {professionalServiceCategories.map((category) => (
+                                                        <option key={category} value={category} className="bg-gray-800 text-white">{category.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</option>
+                                                    ))}
                                                 </select>
                                                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                                                     <svg className="w-5 h-5 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -312,15 +392,38 @@ export default function ProfessionalServices() {
                                                 <input
                                                     type="text"
                                                     placeholder="💰 Budget (e.g., GH₵200-400)"
+                                                    value={searchBudget}
+                                                    onChange={(e) => setSearchBudget(e.target.value)}
                                                     className="w-full px-4 py-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder-white/60 focus:ring-2 focus:ring-purple-400/50 focus:border-white/40 transition-all duration-300 hover:bg-white/15"
                                                 />
                                             </div>
                                         </div>
 
-                                        <div>
-                                            <button className="w-full bg-gradient-to-r from-purple-500/80 to-indigo-500/80 backdrop-blur-md text-white py-4 px-6 rounded-xl font-bold text-lg hover:from-purple-600/90 hover:to-indigo-600/90 transition-all duration-300 hover:scale-105 shadow-lg flex items-center justify-center space-x-2 border border-white/20">
+                                        <div className="space-y-2">
+                                            <div className="relative">
+                                                <input
+                                                    type="text"
+                                                    placeholder="🔍 Keywords (e.g., lawyer, accountant)"
+                                                    value={searchKeywords}
+                                                    onChange={(e) => setSearchKeywords(e.target.value)}
+                                                    className="w-full px-4 py-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder-white/60 focus:ring-2 focus:ring-purple-400/50 focus:border-white/40 transition-all duration-300 hover:bg-white/15"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="md:col-span-1 space-y-4">
+                                            <button
+                                                onClick={handleSearch}
+                                                className="w-full bg-gradient-to-r from-purple-500/80 to-indigo-500/80 backdrop-blur-md text-white py-4 px-6 rounded-xl font-bold text-lg hover:from-purple-600/90 hover:to-indigo-600/90 transition-all duration-300 hover:scale-105 shadow-lg flex items-center justify-center space-x-2 border border-white/20"
+                                            >
                                                 <span>🔍</span>
                                                 <span>Find Experts</span>
+                                            </button>
+                                            <button
+                                                onClick={handleResetFilters}
+                                                className="w-full bg-white/20 backdrop-blur-md text-white py-2 px-4 rounded-xl font-medium hover:bg-white/30 transition-colors border border-white/20"
+                                            >
+                                                Reset
                                             </button>
                                         </div>
                                     </div>
@@ -337,7 +440,13 @@ export default function ProfessionalServices() {
                     <div className="flex justify-between items-center mb-12">
                         <div>
                             <h2 className="text-4xl font-bold mb-4 text-gray-800">Available Professional Service Providers</h2>
-                            <p className="text-xl text-gray-600">Expert professionals for your business and legal needs</p>
+                            <p className="text-xl text-gray-600">
+                                {filteredProviders.length > 0 ?
+                                    `Found ${filteredProviders.length} professional${filteredProviders.length !== 1 ? 's' : ''} ${(searchLocation || searchService || searchBudget || searchKeywords) ? 'matching your criteria' : 'available'
+                                    }` :
+                                    'Expert professionals for your business and legal needs'
+                                }
+                            </p>
                         </div>
                         <div className="flex items-center space-x-4">
                             <select className="px-4 py-2 border border-gray-300 rounded-lg">
@@ -364,13 +473,13 @@ export default function ProfessionalServices() {
                                 Try Again
                             </button>
                         </div>
-                    ) : professionalServiceProviders.length === 0 ? (
+                    ) : filteredProviders.length === 0 ? (
                         <div className="text-center py-12">
-                            <p className="text-gray-600">No professional service providers found.</p>
+                            <p className="text-gray-600">No professional service providers found matching your criteria.</p>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            {professionalServiceProviders.map((professional) => (
+                            {filteredProviders.map((professional) => (
                                 <div key={professional.id} className="bg-white rounded-2xl shadow-lg border-l-4 border-purple-500 hover:shadow-xl transition-all duration-300 overflow-hidden">
                                     <div className="p-6">
                                         <div className="flex items-start space-x-4">
