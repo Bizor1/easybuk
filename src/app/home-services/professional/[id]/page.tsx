@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import BookingForm from '../../../../components/BookingForm';
+import PreBookingInquiry from '../../../../components/messaging/PreBookingInquiry';
 
 // Interface for professional data
 interface Professional {
@@ -391,10 +392,21 @@ export default function HomeServicesProfessional() {
                                 {/* Book Button */}
                                 <button
                                     onClick={() => setShowBookingModal(true)}
-                                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-4 rounded-lg font-bold text-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-300"
+                                    data-booking-trigger
+                                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-4 rounded-lg font-bold text-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-300 mb-3"
                                 >
                                     💳 Book Service
                                 </button>
+
+                                {/* Pre-booking Inquiry */}
+                                {professional && (
+                                    <PreBookingInquiry
+                                        providerId={professional.id.toString()}
+                                        providerName={professional.name}
+                                        providerImage={professional.image}
+                                        className="w-full"
+                                    />
+                                )}
 
                                 {/* Business Info */}
                                 <div className="mt-6 p-4 bg-gray-50 rounded-lg">
