@@ -334,98 +334,94 @@ export default function HomeServices() {
                         </div>
                     </div>
 
-                    {/* Enhanced Glassmorphism Search Overlay */}
-                    <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2 w-full max-w-6xl px-4">
+                    {/* Sleek Modern Search Bar */}
+                    <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2 w-full max-w-7xl px-4">
                         <div className="relative group">
                             {/* Glow effect */}
-                            <div className="absolute -inset-1 bg-gradient-to-r from-green-600/20 to-blue-600/20 rounded-3xl blur-xl group-hover:blur-2xl transition-all duration-300"></div>
+                            <div className="absolute -inset-1 bg-gradient-to-r from-green-400/20 to-blue-400/20 rounded-full blur-lg group-hover:blur-xl transition-all duration-300"></div>
 
                             {/* Main search container */}
-                            <div className="relative bg-white/10 backdrop-blur-2xl rounded-2xl p-6 shadow-2xl border border-white/20 hover:border-white/30 transition-all duration-300">
-                                {/* Subtle background pattern */}
-                                <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent rounded-2xl"></div>
-
-                                <div className="relative z-10">
-                                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-                                        <div className="space-y-2">
-                                            <div className="relative">
-                                                <select
-                                                    value={searchLocation}
-                                                    onChange={(e) => setSearchLocation(e.target.value)}
-                                                    className="w-full px-4 py-4 pr-10 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder-white/60 focus:ring-2 focus:ring-green-400/50 focus:border-white/40 transition-all duration-300 hover:bg-white/15 appearance-none cursor-pointer"
-                                                >
-                                                    <option value="" className="bg-gray-800 text-white">📍 Select Location</option>
-                                                    {ghanaCities.map((city) => (
-                                                        <option key={city} value={city} className="bg-gray-800 text-white">{city.charAt(0).toUpperCase() + city.slice(1)}</option>
-                                                    ))}
-                                                </select>
-                                                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                                    <svg className="w-5 h-5 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                                    </svg>
-                                                </div>
-                                            </div>
+                            <div className="relative bg-white/10 backdrop-blur-3xl rounded-full px-6 py-3 shadow-2xl border border-white/20 hover:border-white/30 transition-all duration-300">
+                                <div className="flex items-center gap-3">
+                                    {/* Location Selector */}
+                                    <div className="relative min-w-[160px]">
+                                        <select
+                                            value={searchLocation}
+                                            onChange={(e) => setSearchLocation(e.target.value)}
+                                            className="w-full px-4 py-2.5 bg-white/10 backdrop-blur-md border-0 rounded-full text-white text-sm placeholder-white/70 focus:ring-2 focus:ring-green-400/50 transition-all duration-300 hover:bg-white/15 appearance-none cursor-pointer"
+                                        >
+                                            <option value="" className="bg-gray-800 text-white">📍 Select Location</option>
+                                            {ghanaCities.map((city) => (
+                                                <option key={city} value={city} className="bg-gray-800 text-white">
+                                                    {city.charAt(0).toUpperCase() + city.slice(1)}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                            <svg className="w-4 h-4 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
                                         </div>
+                                    </div>
 
-                                        <div className="space-y-2">
-                                            <div className="relative">
-                                                <select
-                                                    value={searchService}
-                                                    onChange={(e) => setSearchService(e.target.value)}
-                                                    className="w-full px-4 py-4 pr-10 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder-white/60 focus:ring-2 focus:ring-green-400/50 focus:border-white/40 transition-all duration-300 hover:bg-white/15 appearance-none cursor-pointer"
-                                                >
-                                                    <option value="" className="bg-gray-800 text-white">🏠 Home Service</option>
-                                                    {homeServiceCategories.map((category) => (
-                                                        <option key={category} value={category} className="bg-gray-800 text-white">{category.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</option>
-                                                    ))}
-                                                </select>
-                                                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                                    <svg className="w-5 h-5 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                                    </svg>
-                                                </div>
-                                            </div>
+                                    {/* Service Type Selector */}
+                                    <div className="relative min-w-[160px]">
+                                        <select
+                                            value={searchService}
+                                            onChange={(e) => setSearchService(e.target.value)}
+                                            className="w-full px-4 py-2.5 bg-white/10 backdrop-blur-md border-0 rounded-full text-white text-sm placeholder-white/70 focus:ring-2 focus:ring-green-400/50 transition-all duration-300 hover:bg-white/15 appearance-none cursor-pointer"
+                                        >
+                                            <option value="" className="bg-gray-800 text-white">🏠 Home Service</option>
+                                            {homeServiceCategories.map((category) => (
+                                                <option key={category} value={category} className="bg-gray-800 text-white">
+                                                    {category.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                            <svg className="w-4 h-4 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
                                         </div>
+                                    </div>
 
-                                        <div className="space-y-2">
-                                            <div className="relative">
-                                                <input
-                                                    type="text"
-                                                    placeholder="💰 Budget (e.g., GH₵50-70)"
-                                                    value={searchBudget}
-                                                    onChange={(e) => setSearchBudget(e.target.value)}
-                                                    className="w-full px-4 py-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder-white/60 focus:ring-2 focus:ring-green-400/50 focus:border-white/40 transition-all duration-300 hover:bg-white/15"
-                                                />
-                                            </div>
-                                        </div>
+                                    {/* Budget Input */}
+                                    <div className="relative min-w-[140px]">
+                                        <input
+                                            type="text"
+                                            placeholder="💰 Budget (e.g., GH₵50)"
+                                            value={searchBudget}
+                                            onChange={(e) => setSearchBudget(e.target.value)}
+                                            className="w-full px-4 py-2.5 bg-white/10 backdrop-blur-md border-0 rounded-full text-white text-sm placeholder-white/70 focus:ring-2 focus:ring-green-400/50 transition-all duration-300 hover:bg-white/15"
+                                        />
+                                    </div>
 
-                                        <div className="space-y-2">
-                                            <div className="relative">
-                                                <input
-                                                    type="text"
-                                                    placeholder="🔍 Keywords (e.g., electrician, plumber)"
-                                                    value={searchKeywords}
-                                                    onChange={(e) => setSearchKeywords(e.target.value)}
-                                                    className="w-full px-4 py-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder-white/60 focus:ring-2 focus:ring-green-400/50 focus:border-white/40 transition-all duration-300 hover:bg-white/15"
-                                                />
-                                            </div>
-                                        </div>
+                                    {/* Keywords Input */}
+                                    <div className="relative flex-1 min-w-[180px]">
+                                        <input
+                                            type="text"
+                                            placeholder="🔍 Keywords (e.g., electrician, plumber)"
+                                            value={searchKeywords}
+                                            onChange={(e) => setSearchKeywords(e.target.value)}
+                                            className="w-full px-4 py-2.5 bg-white/10 backdrop-blur-md border-0 rounded-full text-white text-sm placeholder-white/70 focus:ring-2 focus:ring-green-400/50 transition-all duration-300 hover:bg-white/15"
+                                        />
+                                    </div>
 
-                                        <div className="md:col-span-1 space-y-4">
-                                            <button
-                                                onClick={handleSearch}
-                                                className="w-full bg-gradient-to-r from-green-500/80 to-blue-500/80 backdrop-blur-md text-white py-4 px-6 rounded-xl font-bold text-lg hover:from-green-600/90 hover:to-blue-600/90 transition-all duration-300 hover:scale-105 shadow-lg flex items-center justify-center space-x-2 border border-white/20"
-                                            >
-                                                <span>🔍</span>
-                                                <span>Find Services</span>
-                                            </button>
-                                            <button
-                                                onClick={handleResetFilters}
-                                                className="w-full bg-white/20 backdrop-blur-md text-white py-2 px-4 rounded-xl font-medium hover:bg-white/30 transition-colors border border-white/20"
-                                            >
-                                                Reset
-                                            </button>
-                                        </div>
+                                    {/* Action Buttons */}
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={handleSearch}
+                                            className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white px-6 py-2.5 rounded-full font-semibold text-sm transition-all duration-300 hover:scale-105 shadow-lg flex items-center gap-2 border border-white/20"
+                                        >
+                                            <span>🔍</span>
+                                            <span>Find Services</span>
+                                        </button>
+                                        <button
+                                            onClick={handleResetFilters}
+                                            className="bg-white/20 hover:bg-white/30 text-white px-4 py-2.5 rounded-full font-medium text-sm transition-all duration-300 border border-white/20"
+                                        >
+                                            Reset
+                                        </button>
                                     </div>
                                 </div>
                             </div>
