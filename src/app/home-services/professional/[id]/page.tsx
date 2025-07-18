@@ -240,13 +240,20 @@ export default function HomeServicesProfessional() {
                                             ))}
                                         </div>
 
-                                        <div className="flex space-x-4">
-                                            <button className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-lg font-bold hover:from-green-700 hover:to-emerald-700 transition-all duration-300">
-                                                💬 Send Message
-                                            </button>
-                                            <button className="border border-green-600 text-green-600 px-6 py-3 rounded-lg font-bold hover:bg-green-50 transition-colors">
-                                                📞 Call Now
-                                            </button>
+                                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                                            <div className="flex items-start gap-3">
+                                                <div className="flex-shrink-0">
+                                                    <svg className="w-5 h-5 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                                    </svg>
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-medium text-amber-800">💬 Ready to connect?</p>
+                                                    <p className="text-sm text-amber-700 mt-1">
+                                                        Ask questions about services in the booking section. Calls and full messaging unlock after booking confirmation.
+                                                    </p>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
