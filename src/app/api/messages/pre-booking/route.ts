@@ -273,7 +273,7 @@ export async function POST(request: NextRequest) {
                     id: notificationId,
                     userId: receiverUserId,
                     userType: 'PROVIDER',
-                    type: 'PRE_BOOKING_INQUIRY' as any, // Temporary fix until Prisma types are regenerated
+                    type: 'PRE_BOOKING_INQUIRY',
                     title: 'New Service Inquiry',
                     message: `${userWithProfiles.name || 'A client'} sent you a service inquiry`,
                     data: {
