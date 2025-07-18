@@ -41,11 +41,12 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({
                 success: true,
                 totalUnread: 0,
-                unreadByBooking: {}
+                unreadByBooking: {},
+                unreadPreBooking: 0
             });
         }
 
-        // Get unread message counts by booking
+        // Get unread message counts by booking (existing booking-based messages)
         const unreadCounts = await prisma.$queryRaw`
             SELECT 
                 "bookingId",
@@ -58,6 +59,16 @@ export async function GET(request: NextRequest) {
             GROUP BY "bookingId"
         ` as Array<{ bookingId: string; unreadCount: bigint }>;
 
+        // Get unread pre-booking message count
+        const preBookingUnreadResult = await prisma.$queryRaw`
+            SELECT COUNT(*) as "unreadCount"
+            FROM "Message"
+            WHERE 
+                "receiverId" = ANY(${entityIds}::text[])
+                AND "isRead" = false
+                AND "bookingId" IS NULL
+        ` as Array<{ unreadCount: bigint }>;
+
         // Convert bigint to number and create lookup object
         const unreadByBooking: Record<string, number> = {};
         let totalUnread = 0;
@@ -68,10 +79,14 @@ export async function GET(request: NextRequest) {
             totalUnread += count;
         });
 
+        const unreadPreBooking = Number(preBookingUnreadResult[0]?.unreadCount || 0);
+        totalUnread += unreadPreBooking;
+
         return NextResponse.json({
             success: true,
             totalUnread,
-            unreadByBooking
+            unreadByBooking,
+            unreadPreBooking
         });
 
     } catch (error) {

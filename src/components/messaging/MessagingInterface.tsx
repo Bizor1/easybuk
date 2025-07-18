@@ -501,7 +501,7 @@ export default function MessagingInterface({
 
             {/* Message Input */}
             <MessageInput
-                bookingId={bookingId}
+                bookingId={bookingId || ''}
                 onSendMessage={handleSendMessage}
                 placeholder={`Message ${otherParticipant.name}...`}
             />
@@ -514,7 +514,7 @@ export default function MessagingInterface({
             </div>
 
             {/* Video Call Modal */}
-            {isVideoCallOpen && (
+            {isVideoCallOpen && bookingId && (
                 <BookingVideoCall
                     isOpen={isVideoCallOpen}
                     onClose={handleVideoCallClose}
