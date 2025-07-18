@@ -206,6 +206,80 @@ export default function ProfessionalServices() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50">
+            {/* Custom Styles for Glassmorphism Dropdowns */}
+            <style jsx>{`
+                .glass-select {
+                    background: rgba(255, 255, 255, 0.1);
+                    backdrop-filter: blur(20px);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 9999px;
+                    color: white;
+                }
+                
+                .glass-select option {
+                    background: rgba(31, 41, 55, 0.95);
+                    backdrop-filter: blur(20px);
+                    color: white;
+                    padding: 12px 16px;
+                    border: none;
+                    font-size: 14px;
+                    line-height: 1.5;
+                }
+                
+                .glass-select option:hover {
+                    background: linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(99, 102, 241, 0.3));
+                    backdrop-filter: blur(30px);
+                }
+                
+                .glass-select option:checked,
+                .glass-select option:selected {
+                    background: linear-gradient(135deg, rgba(168, 85, 247, 0.4), rgba(99, 102, 241, 0.4));
+                    color: white;
+                    font-weight: 600;
+                }
+                
+                /* Enhanced dropdown styling */
+                .glass-select:focus {
+                    outline: none;
+                    box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.5);
+                }
+                
+                /* Custom scrollbar for dropdown list */
+                select.glass-select {
+                    scrollbar-width: thin;
+                    scrollbar-color: rgba(255, 255, 255, 0.4) transparent;
+                }
+                
+                select.glass-select::-webkit-scrollbar {
+                    width: 8px;
+                }
+                
+                select.glass-select::-webkit-scrollbar-track {
+                    background: rgba(255, 255, 255, 0.1);
+                    border-radius: 4px;
+                }
+                
+                select.glass-select::-webkit-scrollbar-thumb {
+                    background: linear-gradient(135deg, rgba(168, 85, 247, 0.6), rgba(99, 102, 241, 0.6));
+                    border-radius: 4px;
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                }
+                
+                select.glass-select::-webkit-scrollbar-thumb:hover {
+                    background: linear-gradient(135deg, rgba(168, 85, 247, 0.8), rgba(99, 102, 241, 0.8));
+                }
+                
+                /* Limit visible options to ~6 items with scroll */
+                .glass-select {
+                    max-height: auto;
+                }
+                
+                /* Style the dropdown arrow */
+                .glass-select::-ms-expand {
+                    display: none;
+                }
+            `}</style>
+
             {/* Navigation */}
             <nav className="fixed top-0 left-0 right-0 z-50 glass backdrop-blur-md">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -349,11 +423,11 @@ export default function ProfessionalServices() {
                                         <select
                                             value={searchLocation}
                                             onChange={(e) => setSearchLocation(e.target.value)}
-                                            className="w-full px-4 py-2.5 bg-white/10 backdrop-blur-md border-0 rounded-full text-white text-sm placeholder-white/70 focus:ring-2 focus:ring-purple-400/50 transition-all duration-300 hover:bg-white/15 appearance-none cursor-pointer"
+                                            className="w-full px-4 py-2.5 bg-white/10 backdrop-blur-md border-0 rounded-full text-white text-sm placeholder-white/70 focus:ring-2 focus:ring-purple-400/50 transition-all duration-300 hover:bg-white/15 appearance-none cursor-pointer glass-select"
                                         >
-                                            <option value="" className="bg-gray-800 text-white">📍 Select Location</option>
+                                            <option value="">📍 Select Location</option>
                                             {ghanaCities.map((city) => (
-                                                <option key={city} value={city} className="bg-gray-800 text-white">
+                                                <option key={city} value={city}>
                                                     {city.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                                                 </option>
                                             ))}
@@ -370,11 +444,11 @@ export default function ProfessionalServices() {
                                         <select
                                             value={searchService}
                                             onChange={(e) => setSearchService(e.target.value)}
-                                            className="w-full px-4 py-2.5 bg-white/10 backdrop-blur-md border-0 rounded-full text-white text-sm placeholder-white/70 focus:ring-2 focus:ring-purple-400/50 transition-all duration-300 hover:bg-white/15 appearance-none cursor-pointer"
+                                            className="w-full px-4 py-2.5 bg-white/10 backdrop-blur-md border-0 rounded-full text-white text-sm placeholder-white/70 focus:ring-2 focus:ring-purple-400/50 transition-all duration-300 hover:bg-white/15 appearance-none cursor-pointer glass-select"
                                         >
-                                            <option value="" className="bg-gray-800 text-white">💼 Professional Service</option>
+                                            <option value="">💼 Professional Service</option>
                                             {professionalServiceCategories.map((category) => (
-                                                <option key={category} value={category} className="bg-gray-800 text-white">
+                                                <option key={category} value={category}>
                                                     {category.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                                                 </option>
                                             ))}
