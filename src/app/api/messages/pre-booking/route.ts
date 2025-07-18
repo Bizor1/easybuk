@@ -6,16 +6,23 @@ import { ContentFilterService } from '@/lib/content-filter';
 // GET /api/messages/pre-booking - Get pre-booking conversations for a user
 export async function GET(request: NextRequest) {
     try {
+        console.log('=== GET Pre-booking Messages API Called ===');
+
         const tokenPayload = getCurrentUser(request);
+        console.log('Token payload:', tokenPayload ? 'Valid' : 'Invalid');
+
         if (!tokenPayload?.userId) {
+            console.log('Authentication failed - no valid token');
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         const { searchParams } = new URL(request.url);
         const providerId = searchParams.get('providerId');
         const clientId = searchParams.get('clientId');
+        console.log('Request params:', { providerId, clientId });
 
         // Get user profiles to determine entity IDs
+        console.log('Fetching user profiles for userId:', tokenPayload.userId);
         const userWithProfiles = await prisma.user.findUnique({
             where: { id: tokenPayload.userId },
             include: {
@@ -25,8 +32,14 @@ export async function GET(request: NextRequest) {
         });
 
         if (!userWithProfiles) {
+            console.log('User not found for ID:', tokenPayload.userId);
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
+
+        console.log('User profiles found:', {
+            hasClientProfile: !!userWithProfiles.UserClientProfile,
+            hasProviderProfile: !!userWithProfiles.UserProviderProfile
+        });
 
         const userClientId = userWithProfiles.UserClientProfile?.Client?.id;
         const userProviderId = userWithProfiles.UserProviderProfile?.ServiceProvider?.id;
@@ -69,10 +82,14 @@ export async function GET(request: NextRequest) {
             };
         }
 
+        console.log('Query condition:', JSON.stringify(whereCondition, null, 2));
+
         const messages = await prisma.message.findMany({
             where: whereCondition,
             orderBy: { createdAt: 'asc' }
         });
+
+        console.log('Messages found:', messages.length);
 
         return NextResponse.json({
             success: true,
@@ -81,9 +98,11 @@ export async function GET(request: NextRequest) {
         });
 
     } catch (error) {
-        console.error('Error fetching pre-booking messages:', error);
+        console.error('Error in GET pre-booking messages:', error);
+        console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+
         return NextResponse.json(
-            { error: 'Failed to fetch messages' },
+            { error: 'Failed to fetch messages', details: error instanceof Error ? error.message : 'Unknown error' },
             { status: 500 }
         );
     }
@@ -92,21 +111,30 @@ export async function GET(request: NextRequest) {
 // POST /api/messages/pre-booking - Send pre-booking inquiry message
 export async function POST(request: NextRequest) {
     try {
+        console.log('=== POST Pre-booking Message API Called ===');
+
         const tokenPayload = getCurrentUser(request);
+        console.log('Token payload:', tokenPayload ? 'Valid' : 'Invalid');
+
         if (!tokenPayload?.userId) {
+            console.log('Authentication failed - no valid token');
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
+        console.log('Parsing request body...');
         const body = await request.json();
         const { providerId, content, messageType = 'TEXT' } = body;
+        console.log('Request body:', { providerId, content: content?.slice(0, 50) + '...', messageType });
 
         if (!providerId || !content?.trim()) {
+            console.log('Validation failed: missing providerId or content');
             return NextResponse.json({
                 error: 'Provider ID and message content are required'
             }, { status: 400 });
         }
 
         // Get user profiles
+        console.log('Fetching user profiles for userId:', tokenPayload.userId);
         const userWithProfiles = await prisma.user.findUnique({
             where: { id: tokenPayload.userId },
             include: {
@@ -116,14 +144,22 @@ export async function POST(request: NextRequest) {
         });
 
         if (!userWithProfiles) {
+            console.log('User not found for ID:', tokenPayload.userId);
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
+
+        console.log('User profiles found:', {
+            userName: userWithProfiles.name,
+            hasClientProfile: !!userWithProfiles.UserClientProfile,
+            hasProviderProfile: !!userWithProfiles.UserProviderProfile
+        });
 
         // Determine sender details
         const isClient = !!userWithProfiles.UserClientProfile?.Client;
         const isProvider = !!userWithProfiles.UserProviderProfile?.ServiceProvider;
 
         if (!isClient && !isProvider) {
+            console.log('User has no client or provider profile');
             return NextResponse.json({
                 error: 'User must have either client or provider profile'
             }, { status: 400 });
@@ -136,7 +172,10 @@ export async function POST(request: NextRequest) {
         const senderType = isClient ? 'CLIENT' : 'PROVIDER';
         const receiverType = isClient ? 'PROVIDER' : 'CLIENT';
 
+        console.log('Sender details:', { senderId, senderType, receiverType });
+
         // Verify provider exists
+        console.log('Verifying provider exists for ID:', providerId);
         const provider = await prisma.serviceProvider.findUnique({
             where: { id: providerId },
             include: {
@@ -147,13 +186,27 @@ export async function POST(request: NextRequest) {
         });
 
         if (!provider) {
+            console.log('Provider not found for ID:', providerId);
             return NextResponse.json({ error: 'Provider not found' }, { status: 404 });
         }
 
+        console.log('Provider found:', {
+            providerName: provider.UserProviderProfile?.User?.name,
+            hasUserProfile: !!provider.UserProviderProfile
+        });
+
         // Enhanced content filtering for pre-booking (more strict)
+        console.log('Filtering content...');
         const filterResult = ContentFilterService.filterContent(content.trim());
+        console.log('Filter result:', {
+            isAllowed: filterResult.isAllowed,
+            violations: filterResult.violations,
+            riskScore: filterResult.riskScore
+        });
 
         if (!filterResult.isAllowed) {
+            console.log('Content blocked due to violations:', filterResult.violations);
+
             // Log the violation
             await ContentFilterService.logViolation(
                 tokenPayload.userId,
@@ -173,40 +226,54 @@ export async function POST(request: NextRequest) {
 
         // Create pre-booking message
         const messageId = `pre_msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        console.log('Creating message with ID:', messageId);
+
+        const messageData = {
+            id: messageId,
+            content: content.trim(),
+            senderId: senderId,
+            senderType: senderType,
+            receiverId: providerId,
+            receiverType: receiverType,
+            bookingId: null, // Key: No booking ID for pre-booking messages
+            messageType: messageType,
+            attachments: [], // No attachments allowed in pre-booking
+            isRead: false,
+            flagged: filterResult.violations.length > 0,
+            flagReason: filterResult.violations.length > 0 ? filterResult.violations.join(', ') : null,
+            createdAt: new Date()
+        };
+
+        console.log('Message data:', JSON.stringify(messageData, null, 2));
 
         await prisma.message.create({
-            data: {
-                id: messageId,
-                content: content.trim(),
-                senderId: senderId,
-                senderType: senderType,
-                receiverId: providerId,
-                receiverType: receiverType,
-                bookingId: null, // Key: No booking ID for pre-booking messages
-                messageType: messageType,
-                attachments: [], // No attachments allowed in pre-booking
-                isRead: false,
-                flagged: filterResult.violations.length > 0,
-                flagReason: filterResult.violations.length > 0 ? filterResult.violations.join(', ') : null,
-                createdAt: new Date()
-            }
+            data: messageData
         });
+
+        console.log('Message created successfully');
 
         // Get the created message
         const message = await prisma.message.findUnique({
             where: { id: messageId }
         });
 
+        console.log('Retrieved created message:', !!message);
+
         // Send notification to provider (using User ID)
         const receiverUserId = provider.UserProviderProfile?.userId;
+        console.log('Receiver User ID:', receiverUserId);
+
         if (receiverUserId) {
+            console.log('Creating notification...');
+            const notificationId = `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
             // Create notification for new pre-booking inquiry
             await prisma.notification.create({
                 data: {
-                    id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    id: notificationId,
                     userId: receiverUserId,
                     userType: 'PROVIDER',
-                    type: 'PRE_BOOKING_INQUIRY',
+                    type: 'PRE_BOOKING_INQUIRY' as any, // Temporary fix until Prisma types are regenerated
                     title: 'New Service Inquiry',
                     message: `${userWithProfiles.name || 'A client'} sent you a service inquiry`,
                     data: {
@@ -219,7 +286,11 @@ export async function POST(request: NextRequest) {
                     createdAt: new Date()
                 }
             });
+
+            console.log('Notification created successfully');
         }
+
+        console.log('=== POST Pre-booking Message API Completed Successfully ===');
 
         return NextResponse.json({
             success: true,
@@ -234,9 +305,11 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error) {
-        console.error('Error sending pre-booking message:', error);
+        console.error('Error in POST pre-booking message:', error);
+        console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+
         return NextResponse.json(
-            { error: 'Failed to send message' },
+            { error: 'Failed to send message', details: error instanceof Error ? error.message : 'Unknown error' },
             { status: 500 }
         );
     }
