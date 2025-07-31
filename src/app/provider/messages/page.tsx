@@ -74,6 +74,86 @@ export default function ProviderMessagesPage() {
         }
     };
 
+    const markBookingMessagesAsRead = async (bookingId: string) => {
+        try {
+            const response = await fetch('/api/messages/mark-read', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    bookingId: bookingId
+                })
+            });
+
+            if (response.ok) {
+                // Update local unread count immediately for better UX
+                setUnreadMessages(prev => ({
+                    ...prev,
+                    unreadByBooking: {
+                        ...prev.unreadByBooking,
+                        [bookingId]: 0
+                    },
+                    totalUnread: prev.totalUnread - (prev.unreadByBooking[bookingId] || 0)
+                }));
+
+                // Refresh the unread count from server
+                fetchUnreadMessages();
+
+                // Trigger notification bell refresh
+                window.dispatchEvent(new CustomEvent('notificationsChanged'));
+            }
+        } catch (error) {
+            console.error('Error marking booking messages as read:', error);
+        }
+    };
+
+    const markInquiryAsRead = async (clientId: string) => {
+        try {
+            const response = await fetch('/api/messages/mark-read', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    providerId: clientId, // Client ID when provider is marking messages as read
+                    conversationType: 'pre-booking'
+                })
+            });
+
+            if (response.ok) {
+                // Update local unread count immediately for better UX
+                const currentInquiry = inquiries.find(i => i.clientId === clientId);
+                const unreadCount = currentInquiry?.unreadCount || 0;
+
+                setUnreadMessages(prev => ({
+                    ...prev,
+                    unreadPreBooking: Math.max(0, prev.unreadPreBooking - unreadCount),
+                    totalUnread: Math.max(0, prev.totalUnread - unreadCount)
+                }));
+
+                // Update the inquiry's unread count
+                setInquiries(prev =>
+                    prev.map(inquiry =>
+                        inquiry.clientId === clientId
+                            ? { ...inquiry, unreadCount: 0 }
+                            : inquiry
+                    )
+                );
+
+                // Refresh the unread count from server
+                fetchUnreadMessages();
+
+                // Trigger notification bell refresh
+                window.dispatchEvent(new CustomEvent('notificationsChanged'));
+            }
+        } catch (error) {
+            console.error('Error marking inquiry as read:', error);
+        }
+    };
+
     const fetchInquiries = async () => {
         try {
             const response = await fetch('/api/messages/pre-booking');
@@ -249,7 +329,11 @@ export default function ProviderMessagesPage() {
                                                 {bookings.map((booking) => (
                                                     <div
                                                         key={booking.id}
-                                                        onClick={() => setSelectedBookingId(booking.id)}
+                                                        onClick={() => {
+                                                            setSelectedBookingId(booking.id);
+                                                            // Mark booking messages as read when conversation is selected
+                                                            markBookingMessagesAsRead(booking.id);
+                                                        }}
                                                         className={`relative p-4 cursor-pointer transition-all duration-300 hover:bg-gradient-to-r hover:from-purple-50/50 hover:to-pink-50/50 dark:hover:from-purple-900/20 dark:hover:to-pink-900/20 ${selectedBookingId === booking.id
                                                             ? 'bg-gradient-to-r from-purple-100/80 to-pink-100/80 dark:from-purple-900/40 dark:to-pink-900/40'
                                                             : ''
@@ -297,13 +381,8 @@ export default function ProviderMessagesPage() {
                                             </div>
                                         ) : (
                                             <div className="p-8 text-center">
-                                                <div className="w-16 h-16 bg-gradient-to-br from-gray-400 to-gray-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                                                    </svg>
-                                                </div>
-                                                <p className="text-gray-600 dark:text-gray-400">No active bookings</p>
-                                                <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">Messages will appear when you have active bookings</p>
+                                                <p className="text-gray-600 dark:text-gray-400 text-lg font-medium mb-2">No active bookings</p>
+                                                <p className="text-sm text-gray-500 dark:text-gray-500">Messages will appear when you have active bookings</p>
                                             </div>
                                         )
                                     ) : (
@@ -312,7 +391,11 @@ export default function ProviderMessagesPage() {
                                                 {inquiries.map((inquiry) => (
                                                     <div
                                                         key={inquiry.id}
-                                                        onClick={() => setSelectedInquiryId(inquiry.id)}
+                                                        onClick={() => {
+                                                            setSelectedInquiryId(inquiry.id);
+                                                            // Mark inquiry messages as read when conversation is selected
+                                                            markInquiryAsRead(inquiry.clientId);
+                                                        }}
                                                         className={`relative p-4 cursor-pointer transition-all duration-300 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-cyan-50/50 dark:hover:from-blue-900/20 dark:hover:to-cyan-900/20 ${selectedInquiryId === inquiry.id
                                                             ? 'bg-gradient-to-r from-blue-100/80 to-cyan-100/80 dark:from-blue-900/40 dark:to-cyan-900/40'
                                                             : ''

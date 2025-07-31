@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useNotifications } from '@/hooks/useAPI';
 import {
     BellIcon,
     CheckIcon,
@@ -35,62 +36,47 @@ interface NotificationBellProps {
 }
 
 export default function NotificationBell({ userType }: NotificationBellProps) {
-    const [notifications, setNotifications] = useState<Notification[]>([]);
     const [isOpen, setIsOpen] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [unreadCount, setUnreadCount] = useState(0);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
-    // Fetch notifications
-    const fetchNotifications = async () => {
-        try {
-            setLoading(true);
-            const response = await fetch('/api/notifications');
-            if (response.ok) {
-                const data = await response.json();
-                setNotifications(data.notifications || []);
-                setUnreadCount(data.notifications?.filter((n: Notification) => !n.isRead).length || 0);
-            }
-        } catch (error) {
-            console.error('Error fetching notifications:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
+    // Use SWR for notifications with automatic caching and revalidation
+    const { notifications, unreadCount, isLoading, isError, mutateNotifications, markAllAsRead } = useNotifications();
 
-    // Mark notification as read
+    // Mark notification as read (optimistic updates with SWR)
     const markAsRead = async (notificationId: string) => {
         try {
+            // Optimistic update
+            mutateNotifications(
+                (currentData: any) => {
+                    if (!currentData) return currentData;
+                    return {
+                        ...currentData,
+                        notifications: currentData.notifications.map((n: Notification) =>
+                            n.id === notificationId ? { ...n, isRead: true } : n
+                        ),
+                        unreadCount: Math.max(0, currentData.unreadCount - 1)
+                    };
+                },
+                false // Don't revalidate immediately
+            );
+
             const response = await fetch(`/api/notifications/${notificationId}/read`, {
                 method: 'PATCH'
             });
 
             if (response.ok) {
-                setNotifications(prev =>
-                    prev.map(n =>
-                        n.id === notificationId ? { ...n, isRead: true } : n
-                    )
-                );
-                setUnreadCount(prev => Math.max(0, prev - 1));
+                // Revalidate to sync with server
+                mutateNotifications();
+                // Trigger refresh across the app
+                window.dispatchEvent(new CustomEvent('notificationsChanged'));
+            } else {
+                // Revert on error
+                mutateNotifications();
             }
         } catch (error) {
             console.error('Error marking notification as read:', error);
-        }
-    };
-
-    // Mark all as read
-    const markAllAsRead = async () => {
-        try {
-            const response = await fetch('/api/notifications/mark-all-read', {
-                method: 'PATCH'
-            });
-
-            if (response.ok) {
-                setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-                setUnreadCount(0);
-            }
-        } catch (error) {
-            console.error('Error marking all notifications as read:', error);
+            // Revert on error
+            mutateNotifications();
         }
     };
 
@@ -152,14 +138,17 @@ export default function NotificationBell({ userType }: NotificationBellProps) {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Fetch notifications on mount
+    // Listen for notification changes (SWR handles auto-refresh)
     useEffect(() => {
-        fetchNotifications();
+        const handleNotificationChange = () => {
+            mutateNotifications();
+        };
+        window.addEventListener('notificationsChanged', handleNotificationChange);
 
-        // Poll for new notifications every 30 seconds
-        const interval = setInterval(fetchNotifications, 30000);
-        return () => clearInterval(interval);
-    }, []);
+        return () => {
+            window.removeEventListener('notificationsChanged', handleNotificationChange);
+        };
+    }, [mutateNotifications]);
 
     // Sort notifications by urgency and date
     const sortedNotifications = [...notifications]
@@ -219,7 +208,7 @@ export default function NotificationBell({ userType }: NotificationBellProps) {
 
                     {/* Notifications List */}
                     <div className="max-h-80 overflow-y-auto">
-                        {loading ? (
+                        {isLoading ? (
                             <div className="p-6 text-center">
                                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
                                 <p className="text-gray-500 dark:text-gray-400 mt-2">Loading notifications...</p>

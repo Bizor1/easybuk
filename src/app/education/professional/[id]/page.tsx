@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import BookingForm from '../../../../components/BookingForm';
+import PreBookingInquiry from '../../../../components/messaging/PreBookingInquiry';
 
 // Interface for professional data
 interface Professional {
@@ -240,12 +241,14 @@ export default function EducationProfessional() {
                                         </div>
 
                                         <div className="flex space-x-4">
-                                            <button className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-6 py-3 rounded-lg font-bold hover:from-indigo-700 hover:to-blue-700 transition-all duration-300">
-                                                💬 Send Message
-                                            </button>
-                                            <button className="border border-indigo-600 text-indigo-600 px-6 py-3 rounded-lg font-bold hover:bg-indigo-50 transition-colors">
-                                                📞 Call Tutor
-                                            </button>
+                                            <PreBookingInquiry
+                                                providerId={professional.id.toString()}
+                                                providerName={professional.name}
+                                                providerImage={professional.image}
+                                                buttonText="💬 Send Message"
+                                                className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-6 py-3 rounded-lg font-bold hover:from-indigo-700 hover:to-blue-700 transition-all duration-300"
+                                                service={serviceData || undefined}
+                                            />
                                         </div>
                                     </div>
                                 </div>
@@ -409,6 +412,7 @@ export default function EducationProfessional() {
                                 {/* Book Button */}
                                 <button
                                     onClick={() => setShowBookingModal(true)}
+                                    data-booking-trigger
                                     className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white py-4 rounded-lg font-bold text-lg hover:from-indigo-700 hover:to-blue-700 transition-all duration-300"
                                 >
                                     💳 Book & Pay Now

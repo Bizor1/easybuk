@@ -4,22 +4,44 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import MessageBubble, { Message } from './MessageBubble';
+import BookingForm from '../BookingForm';
 
 interface PreBookingInquiryProps {
     providerId: string;
     providerName: string;
     providerImage?: string;
     className?: string;
+    buttonText?: string;
+    service?: {
+        id: string;
+        title: string;
+        description: string;
+        basePrice: number;
+        currency: string;
+        pricingType: 'fixed' | 'hourly' | 'package';
+        duration: number;
+        durationUnit: string;
+        supportedBookingTypes: ('IN_PERSON' | 'VIDEO_CALL' | 'REMOTE' | 'PHONE_CALL')[];
+        provider: {
+            id: string;
+            name: string;
+            avatar?: string;
+            rating: number;
+        };
+    };
 }
 
 export default function PreBookingInquiry({
     providerId,
     providerName,
     providerImage,
-    className = ''
+    className = '',
+    buttonText = 'Ask a Question',
+    service
 }: PreBookingInquiryProps) {
     const { user } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
+    const [showBookingModal, setShowBookingModal] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(false);
@@ -50,6 +72,11 @@ export default function PreBookingInquiry({
                         senderName: msg.senderType === 'CLIENT' ? user.name : providerName,
                         senderImage: msg.senderType === 'CLIENT' ? user.image : providerImage
                     })));
+
+                    // Mark messages as read when opening the conversation
+                    if (data.messages.length > 0) {
+                        markMessagesAsRead();
+                    }
                 }
             }
         } catch (error) {
@@ -58,6 +85,30 @@ export default function PreBookingInquiry({
             setLoading(false);
         }
     }, [user, isOpen, providerId, providerName, providerImage]);
+
+    // Mark messages as read
+    const markMessagesAsRead = async () => {
+        try {
+            const response = await fetch('/api/messages/mark-read', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    providerId: providerId,
+                    conversationType: 'pre-booking'
+                })
+            });
+
+            if (response.ok) {
+                // Trigger notification bell refresh
+                window.dispatchEvent(new CustomEvent('notificationsChanged'));
+            }
+        } catch (error) {
+            console.error('Error marking messages as read:', error);
+        }
+    };
 
     // Send pre-booking message
     const handleSendMessage = async () => {
@@ -171,7 +222,7 @@ export default function PreBookingInquiry({
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.002 8.002 0 01-7.007-4.094c-.58-.58-.58-1.519 0-2.098A8.002 8.002 0 0121 12z" />
                 </svg>
-                Ask a Question
+                {buttonText}
             </button>
 
             {/* Pre-booking Inquiry Modal */}
@@ -231,10 +282,8 @@ export default function PreBookingInquiry({
                                 </div>
                             ) : messages.length === 0 ? (
                                 <div className="text-center py-8 text-gray-500">
-                                    <svg className="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.002 8.002 0 01-7.007-4.094c-.58-.58-.58-1.519 0-2.098A8.002 8.002 0 0121 12z" />
-                                    </svg>
-                                    <p>Start a conversation by asking about this provider&apos;s services!</p>
+                                    <p className="text-lg font-medium mb-2">Start a conversation</p>
+                                    <p className="text-sm">Ask about this provider&apos;s services, availability, and requirements!</p>
                                 </div>
                             ) : (
                                 messages.map((message) => {
@@ -308,12 +357,57 @@ export default function PreBookingInquiry({
                                         </p>
                                     </div>
                                     <button
-                                        onClick={() => {
+                                        onClick={async () => {
                                             setIsOpen(false);
-                                            // Trigger booking modal if available, or redirect to booking
+
+                                            // If we have service data, show the booking modal directly
+                                            if (service) {
+                                                setShowBookingModal(true);
+                                                return;
+                                            }
+
+                                            // Fallback: Try to trigger existing booking modal or redirect
                                             const bookingButton = document.querySelector('[data-booking-trigger]') as HTMLButtonElement;
                                             if (bookingButton) {
                                                 bookingButton.click();
+                                            } else {
+                                                // If no booking trigger found, redirect to provider's profile page
+                                                try {
+                                                    const response = await fetch(`/api/providers/${providerId}`);
+                                                    if (response.ok) {
+                                                        const data = await response.json();
+                                                        const category = data.specialty || data.category || '';
+
+                                                        // Map category to the correct profile page route
+                                                        let profileRoute = '/explore'; // fallback
+
+                                                        if (category.toLowerCase().includes('health') || category.toLowerCase().includes('medical')) {
+                                                            profileRoute = `/healthcare/professional/${providerId}`;
+                                                        } else if (category.toLowerCase().includes('creative') || category.toLowerCase().includes('design') || category.toLowerCase().includes('art')) {
+                                                            profileRoute = `/creative/professional/${providerId}`;
+                                                        } else if (category.toLowerCase().includes('technical') || category.toLowerCase().includes('tech') || category.toLowerCase().includes('repair')) {
+                                                            profileRoute = `/technical/professional/${providerId}`;
+                                                        } else if (category.toLowerCase().includes('education') || category.toLowerCase().includes('tutor') || category.toLowerCase().includes('teach')) {
+                                                            profileRoute = `/education/professional/${providerId}`;
+                                                        } else if (category.toLowerCase().includes('home') || category.toLowerCase().includes('cleaning') || category.toLowerCase().includes('maintenance')) {
+                                                            profileRoute = `/home-services/professional/${providerId}`;
+                                                        } else if (category.toLowerCase().includes('legal') || category.toLowerCase().includes('law') || category.toLowerCase().includes('financial') || category.toLowerCase().includes('business')) {
+                                                            profileRoute = `/professional-services/professional/${providerId}`;
+                                                        } else {
+                                                            // Try to match against common service categories
+                                                            profileRoute = `/explore`; // fallback to explore page
+                                                        }
+
+                                                        window.location.href = profileRoute;
+                                                    } else {
+                                                        // Fallback to explore page
+                                                        window.location.href = `/explore`;
+                                                    }
+                                                } catch (error) {
+                                                    console.error('Failed to fetch provider details:', error);
+                                                    // Fallback to explore page
+                                                    window.location.href = `/explore`;
+                                                }
                                             }
                                         }}
                                         className="ml-3 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors"
@@ -332,6 +426,27 @@ export default function PreBookingInquiry({
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Booking Modal */}
+            {showBookingModal && service && (
+                <BookingForm
+                    service={service}
+                    onClose={() => setShowBookingModal(false)}
+                    onBookingComplete={() => {
+                        setShowBookingModal(false);
+                        // Optionally show a success message
+                    }}
+                    category={
+                        service.title.toLowerCase().includes('health') || service.title.toLowerCase().includes('medical') ? 'healthcare' :
+                            service.title.toLowerCase().includes('creative') || service.title.toLowerCase().includes('design') ? 'creative' :
+                                service.title.toLowerCase().includes('technical') || service.title.toLowerCase().includes('repair') ? 'technical' :
+                                    service.title.toLowerCase().includes('education') || service.title.toLowerCase().includes('tutor') ? 'education' :
+                                        service.title.toLowerCase().includes('home') || service.title.toLowerCase().includes('cleaning') ? 'home' :
+                                            service.title.toLowerCase().includes('legal') || service.title.toLowerCase().includes('law') ? 'professional' :
+                                                'professional'
+                    }
+                />
             )}
         </>
     );

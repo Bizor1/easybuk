@@ -178,7 +178,7 @@ export default function Technical() {
                                 height={40}
                                 className="w-10 h-10"
                             />
-                            <span className="text-2xl font-bold text-gradient-mixed">EasyBuk</span>
+                            <span className="text-2xl font-bold text-gradient-mixed navbar-brand">EasyBuk</span>
                         </Link>
 
                         <div className="flex items-center space-x-4">

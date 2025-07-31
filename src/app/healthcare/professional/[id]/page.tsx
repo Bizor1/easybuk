@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import BookingForm from '../../../../components/BookingForm';
+import PreBookingInquiry from '../../../../components/messaging/PreBookingInquiry';
 
 export default function HealthcareProfessional() {
     const params = useParams();
@@ -127,12 +128,12 @@ export default function HealthcareProfessional() {
                                 height={40}
                                 className="w-10 h-10"
                             />
-                            <span className="text-2xl font-bold text-gradient-mixed">EasyBuk</span>
+                            <span className="text-2xl font-bold text-gradient-mixed navbar-brand">EasyBuk</span>
                         </Link>
 
                         <div className="flex items-center space-x-4">
-                            <Link href="/healthcare" className="text-gray-700 hover:text-blue-600 transition-colors">← Back to Healthcare</Link>
-                            <Link href="/contact" className="btn-secondary">Contact Us</Link>
+                            <Link href="/healthcare" className="navbar-link text-gray-700 hover:text-blue-600 transition-colors">← Back to Healthcare</Link>
+                            <Link href="/contact" className="btn-secondary navbar-button">Contact Us</Link>
                         </div>
                     </div>
                 </div>
@@ -195,27 +196,30 @@ export default function HealthcareProfessional() {
                                         )}
 
                                         <div className="flex space-x-4">
-                                            <button className="bg-gradient-to-r from-blue-600 to-green-600 text-white px-6 py-3 rounded-lg font-bold hover:from-blue-700 hover:to-green-700 transition-all duration-300">
-                                                💬 Send Message
-                                            </button>
-                                            <button className="border border-blue-600 text-blue-600 px-6 py-3 rounded-lg font-bold hover:bg-blue-50 transition-colors">
-                                                📞 Call Clinic
-                                            </button>
+                                            <PreBookingInquiry
+                                                providerId={professional.id}
+                                                providerName={professional.name}
+                                                providerImage={professional.profilePicture}
+                                                buttonText="💬 Send Message"
+                                                className="bg-gradient-to-r from-blue-600 to-green-600 text-white px-6 py-3 rounded-lg font-bold hover:from-blue-700 hover:to-green-700 transition-all duration-300"
+                                                service={serviceData}
+                                            />
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Services Offered */}
-                                {professional.services && professional.services.length > 0 && (
+                                {((professional.servicesDetailed && professional.servicesDetailed.length > 0) || (professional.services && professional.services.length > 0)) && (
                                     <div className="mb-6">
                                         <h3 className="text-xl font-bold text-gray-800 mb-3">Services Offered</h3>
                                         <div className="grid grid-cols-2 gap-3">
-                                            {professional.services.map((service: any, index: number) => (
-                                                <div key={index} className={`px-4 py-2 rounded-lg text-center ${service.id === professional.primaryService?.id
-                                                    ? 'bg-blue-600 text-white font-medium'
-                                                    : 'bg-blue-50 text-blue-700'
-                                                    }`}>
-                                                    {service.name || service.title}
+                                            {/* Use detailed services if available, otherwise use simple services array */}
+                                            {(professional.servicesDetailed && professional.servicesDetailed.length > 0
+                                                ? professional.servicesDetailed
+                                                : professional.services.map((serviceName: string) => ({ name: serviceName }))
+                                            ).map((service: any, index: number) => (
+                                                <div key={index} className="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg text-center font-medium">
+                                                    {typeof service === 'string' ? service : (service && (service.name || service.title)) || 'Service'}
                                                 </div>
                                             ))}
                                         </div>
@@ -352,6 +356,7 @@ export default function HealthcareProfessional() {
                                 {/* Book Button */}
                                 <button
                                     onClick={() => setShowBookingModal(true)}
+                                    data-booking-trigger
                                     className="w-full bg-gradient-to-r from-blue-600 to-green-600 text-white py-4 rounded-lg font-bold text-lg hover:from-blue-700 hover:to-green-700 transition-all duration-300"
                                 >
                                     💳 Book Consultation

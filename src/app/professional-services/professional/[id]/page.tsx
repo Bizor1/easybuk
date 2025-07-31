@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import BookingForm from '@/components/BookingForm';
+import PreBookingInquiry from '@/components/messaging/PreBookingInquiry';
 
 // Interface for professional data
 interface Professional {
@@ -137,6 +138,7 @@ export default function ProfessionalServicesProfessional() {
         provider: {
             id: professional.id.toString(),
             name: professional.name,
+            avatar: professional.image,
             rating: professional.rating
         }
     } : null;
@@ -256,27 +258,31 @@ export default function ProfessionalServicesProfessional() {
                                         </div>
 
                                         <div className="flex space-x-4">
-                                            <button className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-3 rounded-lg font-bold hover:from-purple-700 hover:to-indigo-700 transition-all duration-300">
-                                                💬 Send Message
-                                            </button>
-                                            <button className="border border-purple-600 text-purple-600 px-6 py-3 rounded-lg font-bold hover:bg-purple-50 transition-colors">
-                                                📞 Call Office
-                                            </button>
+                                            <PreBookingInquiry
+                                                providerId={professional.id.toString()}
+                                                providerName={professional.name}
+                                                providerImage={professional.image}
+                                                buttonText="💬 Send Message"
+                                                className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-3 rounded-lg font-bold hover:from-purple-700 hover:to-indigo-700 transition-all duration-300"
+                                                service={serviceData || undefined}
+                                            />
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Services Offered */}
-                                <div className="mb-6">
-                                    <h3 className="text-xl font-bold text-gray-800 mb-3">💼 Services Offered</h3>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                        {professional.services.map((service, index) => (
-                                            <div key={index} className="bg-purple-50 text-purple-700 px-4 py-2 rounded-lg text-center">
-                                                {service}
-                                            </div>
-                                        ))}
+                                {professional.services && professional.services.length > 0 && (
+                                    <div className="mb-6">
+                                        <h3 className="text-xl font-bold text-gray-800 mb-3">💼 Services Offered</h3>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                            {professional.services.map((service: any, index: number) => (
+                                                <div key={index} className="bg-purple-50 text-purple-700 px-4 py-2 rounded-lg text-center font-medium">
+                                                    {typeof service === 'string' ? service : (service && (service.name || service.title)) || 'Service'}
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
+                                )}
 
                                 {/* About */}
                                 <div className="mb-6">
@@ -400,6 +406,7 @@ export default function ProfessionalServicesProfessional() {
                                 {/* Book Button */}
                                 <button
                                     onClick={() => setShowBookingForm(true)}
+                                    data-booking-trigger
                                     className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-4 rounded-lg font-bold text-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
                                 >
                                     💳 Book Consultation

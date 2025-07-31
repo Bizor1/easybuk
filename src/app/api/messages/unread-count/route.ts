@@ -59,33 +59,45 @@ export async function GET(request: NextRequest) {
             GROUP BY "bookingId"
         ` as Array<{ bookingId: string; unreadCount: bigint }>;
 
-        // Get unread pre-booking message count
-        const preBookingUnreadResult = await prisma.$queryRaw`
-            SELECT COUNT(*) as "unreadCount"
+        // Get unread pre-booking message counts grouped by sender (the other participant)
+        const preBookingUnreadCounts = await prisma.$queryRaw`
+            SELECT 
+                "senderId",
+                COUNT(*) as "unreadCount"
             FROM "Message"
             WHERE 
                 "receiverId" = ANY(${entityIds}::text[])
                 AND "isRead" = false
                 AND "bookingId" IS NULL
-        ` as Array<{ unreadCount: bigint }>;
+            GROUP BY "senderId"
+        ` as Array<{ senderId: string; unreadCount: bigint }>;
 
-        // Convert bigint to number and create lookup object
+        // Convert bigint to number and create lookup objects
         const unreadByBooking: Record<string, number> = {};
+        const unreadByInquiry: Record<string, number> = {};
         let totalUnread = 0;
 
+        // Process booking message counts
         unreadCounts.forEach(row => {
             const count = Number(row.unreadCount);
             unreadByBooking[row.bookingId] = count;
             totalUnread += count;
         });
 
-        const unreadPreBooking = Number(preBookingUnreadResult[0]?.unreadCount || 0);
-        totalUnread += unreadPreBooking;
+        // Process pre-booking message counts (group by provider/sender ID)
+        preBookingUnreadCounts.forEach(row => {
+            const count = Number(row.unreadCount);
+            unreadByInquiry[row.senderId] = count;
+            totalUnread += count;
+        });
+
+        const unreadPreBooking = Object.values(unreadByInquiry).reduce((sum, count) => sum + count, 0);
 
         return NextResponse.json({
             success: true,
             totalUnread,
             unreadByBooking,
+            unreadByInquiry,
             unreadPreBooking
         });
 

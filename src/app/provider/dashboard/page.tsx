@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import SimpleNotificationBell from '@/components/SimpleNotificationBell';
 import { createPortal } from 'react-dom';
+import { useProviderDashboardStats, useProviderReviews, useProviderEarnings, useProviderSetupStatus } from '@/hooks/useAPI';
 
 // Import dashboard components
 import EarningsCard from '@/components/provider/EarningsCard';
@@ -17,36 +18,22 @@ import AvailabilityToggle from '@/components/provider/AvailabilityToggle';
 import AccountSetupFlow from '@/components/provider/AccountSetupFlow';
 
 export default function ProviderDashboard() {
-    const [performanceData, setPerformanceData] = useState({
-        rating: 4.8,
-        reviews: 127,
-        responseRate: 96
-    });
+    // Use SWR for all dashboard data with caching
+    const { stats: dashboardStats, isLoading: statsLoading, isError: statsError, mutateStats } = useProviderDashboardStats();
+    const { stats: reviewStats, isLoading: reviewsLoading, mutateReviews } = useProviderReviews();
+    const { earnings: earningsData, isLoading: earningsLoading, mutateEarnings } = useProviderEarnings();
+    const { setupStatus: providerSetupStatus, isLoading: setupLoading, mutateSetupStatus } = useProviderSetupStatus();
 
-    useEffect(() => {
-        const fetchPerformanceData = async () => {
-            try {
-                const response = await fetch('/api/provider/reviews');
-                if (response.ok) {
-                    const data = await response.json();
-                    setPerformanceData({
-                        rating: data.stats.averageRating || 4.8,
-                        reviews: data.stats.totalReviews || 127,
-                        responseRate: data.stats.responseRate || 96
-                    });
-                }
-            } catch (error) {
-                console.error('Error fetching performance data:', error);
-            }
-        };
-
-        fetchPerformanceData();
-    }, []);
+    // Performance data from SWR or defaults
+    const performanceData = {
+        rating: reviewStats?.averageRating || 4.8,
+        reviews: reviewStats?.totalReviews || 127,
+        responseRate: reviewStats?.responseRate || 96
+    };
     const { user, logout, switchRole, addRole } = useAuth();
     const [isOnline, setIsOnline] = useState(true);
     const [mounted, setMounted] = useState(false);
     const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
-    const [setupStatus, setSetupStatus] = useState<any>(null);
     const [showSetupFlow, setShowSetupFlow] = useState(true); // Start with setup flow to avoid flash
     const [isCheckingSetup, setIsCheckingSetup] = useState(true); // Track loading state
     const hasInitialized = useRef(false); // Track if we've already initialized
@@ -111,56 +98,41 @@ export default function ProviderDashboard() {
         }
     };
 
-    // Animation on mount
+    // Animation on mount and setup flow logic
     useEffect(() => {
         setMounted(true);
-        fetchSetupStatus();
     }, []);
 
-    // Fetch account setup status
-    const fetchSetupStatus = async () => {
-        try {
-            setIsCheckingSetup(true);
-            const response = await fetch('/api/provider/setup-status');
-            console.log('Setup status response:', response.status);
+    // Update setup flow based on SWR data
+    useEffect(() => {
+        if (providerSetupStatus && Object.keys(providerSetupStatus).length > 0) {
+            setIsCheckingSetup(false);
 
-            if (response.ok) {
-                const status = await response.json();
-                console.log('Setup status data:', status);
-                setSetupStatus(status);
+            // Check if setup is incomplete (excluding documents under review)
+            const incompleteSteps = Object.entries(providerSetupStatus).filter(([key, value]) => {
+                // Allow documents to be under_review or completed, that's not incomplete
+                if (key === 'documents' && (value === 'under_review' || value === 'completed')) return false;
+                return value !== 'completed' && value !== 'verified';
+            });
 
-                // Check if setup is incomplete (excluding documents under review)
-                const incompleteSteps = Object.entries(status).filter(([key, value]) => {
-                    // Allow documents to be under_review or completed, that's not incomplete
-                    if (key === 'documents' && (value === 'under_review' || value === 'completed')) return false;
-                    return value !== 'completed' && value !== 'verified';
-                });
+            const hasIncompleteSteps = incompleteSteps.length > 0;
+            console.log('Has incomplete steps:', hasIncompleteSteps);
+            console.log('Incomplete steps:', incompleteSteps);
+            console.log('All status values:', providerSetupStatus);
 
-                const hasIncompleteSteps = incompleteSteps.length > 0;
-                console.log('Has incomplete steps:', hasIncompleteSteps);
-                console.log('Incomplete steps:', incompleteSteps);
-                console.log('All status values:', status);
-
-                // Only show setup flow if there are actually incomplete steps (not just pending verification)
-                setShowSetupFlow(hasIncompleteSteps);
-            } else {
-                console.error('Setup status API error:', response.status);
-                // Force show setup flow if API fails
-                setShowSetupFlow(true);
-            }
-        } catch (error) {
-            console.error('Failed to fetch setup status:', error);
-            // Force show setup flow if API fails
+            // Only show setup flow if there are actually incomplete steps (not just pending verification)
+            setShowSetupFlow(hasIncompleteSteps);
+        } else if (!setupLoading) {
+            // If no setup status data and not loading, show setup flow
             setShowSetupFlow(true);
-        } finally {
             setIsCheckingSetup(false);
         }
-    };
+    }, [providerSetupStatus, setupLoading]);
 
     const handleSetupComplete = () => {
         setShowSetupFlow(false);
         setIsCheckingSetup(false);
-        fetchSetupStatus(); // Refresh status
+        mutateSetupStatus(); // Refresh status
     };
 
     // Close dropdown when clicking outside
@@ -198,7 +170,7 @@ export default function ProviderDashboard() {
     useEffect(() => {
         if (user && !hasInitialized.current) {
             hasInitialized.current = true;
-            fetchSetupStatus();
+            mutateSetupStatus();
         }
     }, [user]);
 
@@ -428,7 +400,7 @@ export default function ProviderDashboard() {
 
             <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {/* Document Verification Status Banner */}
-                {setupStatus && setupStatus.documents === 'under_review' && (
+                {providerSetupStatus && providerSetupStatus.documents === 'under_review' && (
                     <div className="mb-6 bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-400 rounded-lg p-6 shadow-lg">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-4">
@@ -479,7 +451,7 @@ export default function ProviderDashboard() {
 
 
                 {/* Only show verification completed banner, not setup completion since that happens early */}
-                {setupStatus && setupStatus.documents === 'verified' && (
+                {providerSetupStatus && providerSetupStatus.documents === 'verified' && (
                     <div className="mb-6 bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-400 rounded-lg p-6 shadow-lg">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-4">

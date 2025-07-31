@@ -74,7 +74,7 @@ export default function PreBookingChat({
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    providerId: user?.profiles?.provider?.id,
+                    clientId: clientId,
                     content: newMessage.trim(),
                     messageType: 'TEXT'
                 })

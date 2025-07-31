@@ -28,7 +28,17 @@ export default function SimpleNotificationBell({ userType }: NotificationBellPro
 
         fetchNotifications();
         const interval = setInterval(fetchNotifications, 30000);
-        return () => clearInterval(interval);
+
+        // Listen for notification changes (when messages are marked as read)
+        const handleNotificationChange = () => {
+            fetchNotifications();
+        };
+        window.addEventListener('notificationsChanged', handleNotificationChange);
+
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener('notificationsChanged', handleNotificationChange);
+        };
     }, []);
 
     return (

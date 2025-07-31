@@ -123,13 +123,13 @@ export async function POST(request: NextRequest) {
 
         console.log('Parsing request body...');
         const body = await request.json();
-        const { providerId, content, messageType = 'TEXT' } = body;
-        console.log('Request body:', { providerId, content: content?.slice(0, 50) + '...', messageType });
+        const { providerId, clientId, content, messageType = 'TEXT' } = body;
+        console.log('Request body:', { providerId, clientId, content: content?.slice(0, 50) + '...', messageType });
 
-        if (!providerId || !content?.trim()) {
-            console.log('Validation failed: missing providerId or content');
+        if ((!providerId && !clientId) || !content?.trim()) {
+            console.log('Validation failed: missing providerId/clientId or content');
             return NextResponse.json({
-                error: 'Provider ID and message content are required'
+                error: 'Either Provider ID or Client ID and message content are required'
             }, { status: 400 });
         }
 
@@ -165,35 +165,82 @@ export async function POST(request: NextRequest) {
             }, { status: 400 });
         }
 
-        // For pre-booking, typically clients message providers
-        const senderId = isClient
-            ? userWithProfiles.UserClientProfile!.Client!.id
-            : userWithProfiles.UserProviderProfile!.ServiceProvider!.id;
-        const senderType = isClient ? 'CLIENT' : 'PROVIDER';
-        const receiverType = isClient ? 'PROVIDER' : 'CLIENT';
+        // Determine sender and receiver based on who is messaging whom
+        let senderId: string;
+        let receiverId: string;
+        let senderType: 'CLIENT' | 'PROVIDER';
+        let receiverType: 'CLIENT' | 'PROVIDER';
+        let receiverUserId: string | undefined;
 
-        console.log('Sender details:', { senderId, senderType, receiverType });
-
-        // Verify provider exists
-        console.log('Verifying provider exists for ID:', providerId);
-        const provider = await prisma.serviceProvider.findUnique({
-            where: { id: providerId },
-            include: {
-                UserProviderProfile: {
-                    include: { User: true }
-                }
+        if (providerId) {
+            // Client is messaging a provider
+            if (!isClient) {
+                return NextResponse.json({ error: 'Only clients can initiate provider conversations' }, { status: 400 });
             }
-        });
 
-        if (!provider) {
-            console.log('Provider not found for ID:', providerId);
-            return NextResponse.json({ error: 'Provider not found' }, { status: 404 });
+            senderId = userWithProfiles.UserClientProfile!.Client!.id;
+            receiverId = providerId;
+            senderType = 'CLIENT';
+            receiverType = 'PROVIDER';
+
+            // Verify provider exists
+            console.log('Verifying provider exists for ID:', providerId);
+            const provider = await prisma.serviceProvider.findUnique({
+                where: { id: providerId },
+                include: {
+                    UserProviderProfile: {
+                        include: { User: true }
+                    }
+                }
+            });
+
+            if (!provider) {
+                console.log('Provider not found for ID:', providerId);
+                return NextResponse.json({ error: 'Provider not found' }, { status: 404 });
+            }
+
+            receiverUserId = provider.UserProviderProfile?.userId;
+            console.log('Provider found:', {
+                providerName: provider.UserProviderProfile?.User?.name,
+                hasUserProfile: !!provider.UserProviderProfile
+            });
+        } else if (clientId) {
+            // Provider is replying to a client
+            if (!isProvider) {
+                return NextResponse.json({ error: 'Only providers can reply to client inquiries' }, { status: 400 });
+            }
+
+            senderId = userWithProfiles.UserProviderProfile!.ServiceProvider!.id;
+            receiverId = clientId;
+            senderType = 'PROVIDER';
+            receiverType = 'CLIENT';
+
+            // Verify client exists
+            console.log('Verifying client exists for ID:', clientId);
+            const client = await prisma.client.findUnique({
+                where: { id: clientId },
+                include: {
+                    UserClientProfile: {
+                        include: { User: true }
+                    }
+                }
+            });
+
+            if (!client) {
+                console.log('Client not found for ID:', clientId);
+                return NextResponse.json({ error: 'Client not found' }, { status: 404 });
+            }
+
+            receiverUserId = client.UserClientProfile?.userId;
+            console.log('Client found:', {
+                clientName: client.UserClientProfile?.User?.name,
+                hasUserProfile: !!client.UserClientProfile
+            });
+        } else {
+            return NextResponse.json({ error: 'Either providerId or clientId must be provided' }, { status: 400 });
         }
 
-        console.log('Provider found:', {
-            providerName: provider.UserProviderProfile?.User?.name,
-            hasUserProfile: !!provider.UserProviderProfile
-        });
+        console.log('Conversation details:', { senderId, receiverId, senderType, receiverType, receiverUserId });
 
         // Enhanced content filtering for pre-booking (more strict)
         console.log('Filtering content...');
@@ -233,7 +280,7 @@ export async function POST(request: NextRequest) {
             content: content.trim(),
             senderId: senderId,
             senderType: senderType,
-            receiverId: providerId,
+            receiverId: receiverId,
             receiverType: receiverType,
             bookingId: null, // Key: No booking ID for pre-booking messages
             messageType: messageType,
@@ -259,26 +306,26 @@ export async function POST(request: NextRequest) {
 
         console.log('Retrieved created message:', !!message);
 
-        // Send notification to provider (using User ID)
-        const receiverUserId = provider.UserProviderProfile?.userId;
+        // Send notification to receiver (using User ID)
         console.log('Receiver User ID:', receiverUserId);
 
         if (receiverUserId) {
             console.log('Creating notification...');
             const notificationId = `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-            // Create notification for new pre-booking inquiry
+            // Create notification for new pre-booking message
             await prisma.notification.create({
                 data: {
                     id: notificationId,
                     userId: receiverUserId,
-                    userType: 'PROVIDER',
-                    type: 'PRE_BOOKING_INQUIRY',
-                    title: 'New Service Inquiry',
-                    message: `${userWithProfiles.name || 'A client'} sent you a service inquiry`,
+                    userType: receiverType,
+                    type: 'PRE_BOOKING_INQUIRY' as any, // Temporary fix for TypeScript
+                    title: senderType === 'CLIENT' ? 'New Service Inquiry' : 'New Message Reply',
+                    message: `${userWithProfiles.name || (senderType === 'CLIENT' ? 'A client' : 'A provider')} sent you a ${senderType === 'CLIENT' ? 'service inquiry' : 'message'}`,
                     data: {
-                        providerId: providerId,
+                        conversationId: `${senderId}-${receiverId}`,
                         senderId: senderId,
+                        receiverId: receiverId,
                         senderName: userWithProfiles.name,
                         messagePreview: content.slice(0, 100) + (content.length > 100 ? '...' : '')
                     },

@@ -100,21 +100,21 @@ export default function LoginForm({ onToggleMode, redirectPath }: LoginFormProps
     }
 
     return (
-        <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-xl p-8">
+        <div className="w-full max-w-md mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-200 dark:border-gray-700">
             <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold text-gray-800 mb-2">Welcome Back</h2>
-                <p className="text-gray-600">Sign in to your EasyBuk account</p>
+                <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">Welcome Back</h2>
+                <p className="text-gray-600 dark:text-gray-300">Sign in to your EasyBuk account</p>
             </div>
 
             {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+                <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg mb-6">
                     {error}
                 </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Email Address
                     </label>
                     <input
@@ -123,13 +123,13 @@ export default function LoginForm({ onToggleMode, redirectPath }: LoginFormProps
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-colors placeholder-gray-400 dark:placeholder-gray-500"
                         placeholder="Enter your email"
                     />
                 </div>
 
                 <div>
-                    <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Password
                     </label>
                     <input
@@ -138,7 +138,7 @@ export default function LoginForm({ onToggleMode, redirectPath }: LoginFormProps
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-colors placeholder-gray-400 dark:placeholder-gray-500"
                         placeholder="Enter your password"
                     />
                 </div>
@@ -148,15 +148,15 @@ export default function LoginForm({ onToggleMode, redirectPath }: LoginFormProps
                         <input
                             id="remember"
                             type="checkbox"
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            className="h-4 w-4 text-blue-600 dark:text-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded"
                         />
-                        <label htmlFor="remember" className="ml-2 block text-sm text-gray-700">
+                        <label htmlFor="remember" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
                             Remember me
                         </label>
                     </div>
                     <button
                         type="button"
-                        className="text-sm text-blue-600 hover:text-blue-500"
+                        className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300"
                     >
                         Forgot password?
                     </button>
@@ -181,10 +181,10 @@ export default function LoginForm({ onToggleMode, redirectPath }: LoginFormProps
             <div className="mt-6 text-center">
                 <div className="relative">
                     <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-gray-300" />
+                        <div className="w-full border-t border-gray-300 dark:border-gray-600" />
                     </div>
                     <div className="relative flex justify-center text-sm">
-                        <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                        <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">Or continue with</span>
                     </div>
                 </div>
 
@@ -192,7 +192,7 @@ export default function LoginForm({ onToggleMode, redirectPath }: LoginFormProps
                     type="button"
                     onClick={handleGoogleLogin}
                     disabled={loading || googleLoading}
-                    className="mt-4 w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="mt-4 w-full flex items-center justify-center px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {googleLoading ? (
                         <div className="flex items-center justify-center">
@@ -215,12 +215,12 @@ export default function LoginForm({ onToggleMode, redirectPath }: LoginFormProps
 
             {onToggleMode && (
                 <div className="mt-8 text-center">
-                    <p className="text-center text-gray-600">
+                    <p className="text-center text-gray-600 dark:text-gray-400">
                         Don&apos;t have an account?{' '}
                         <button
                             type="button"
                             onClick={onToggleMode}
-                            className="text-blue-600 hover:text-blue-700 font-medium"
+                            className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
                         >
                             Sign up here
                         </button>

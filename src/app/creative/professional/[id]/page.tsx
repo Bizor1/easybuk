@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import BookingForm from '../../../../components/BookingForm';
+import PreBookingInquiry from '../../../../components/messaging/PreBookingInquiry';
 
 export default function CreativeProfessional() {
     const params = useParams();
@@ -107,7 +108,7 @@ export default function CreativeProfessional() {
         provider: {
             id: professional.id,
             name: professional.name,
-            avatar: professional.profilePicture,
+            avatar: professional.profilePicture || professional.image,
             rating: professional.averageRating || 4.5
         }
     };
@@ -190,27 +191,35 @@ export default function CreativeProfessional() {
                                         </div>
 
                                         <div className="flex space-x-4">
-                                            <button className="bg-gradient-to-r from-pink-600 to-rose-600 text-white px-6 py-3 rounded-lg font-bold hover:from-pink-700 hover:to-rose-700 transition-all duration-300">
-                                                💬 Send Message
-                                            </button>
-                                            <button className="border border-pink-600 text-pink-600 px-6 py-3 rounded-lg font-bold hover:bg-pink-50 transition-colors">
-                                                📞 Call Studio
-                                            </button>
+                                            <PreBookingInquiry
+                                                providerId={professional.id}
+                                                providerName={professional.name}
+                                                providerImage={professional.profilePicture}
+                                                buttonText="💬 Send Message"
+                                                className="bg-gradient-to-r from-pink-600 to-rose-600 text-white px-6 py-3 rounded-lg font-bold hover:from-pink-700 hover:to-rose-700 transition-all duration-300"
+                                                service={serviceData}
+                                            />
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Services Offered */}
-                                <div className="mb-6">
-                                    <h3 className="text-xl font-bold text-gray-800 mb-3">🎨 Creative Services</h3>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                        {professional.services.map((service: any, index: any) => (
-                                            <div key={index} className="bg-pink-50 text-pink-700 px-4 py-2 rounded-lg text-center">
-                                                {service}
-                                            </div>
-                                        ))}
+                                {((professional.servicesDetailed && professional.servicesDetailed.length > 0) || (professional.services && professional.services.length > 0)) && (
+                                    <div className="mb-6">
+                                        <h3 className="text-xl font-bold text-gray-800 mb-3">🎨 Creative Services</h3>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                            {/* Use detailed services if available, otherwise use simple services array */}
+                                            {(professional.servicesDetailed && professional.servicesDetailed.length > 0
+                                                ? professional.servicesDetailed
+                                                : professional.services.map((serviceName: string) => ({ name: serviceName }))
+                                            ).map((service: any, index: number) => (
+                                                <div key={index} className="bg-pink-50 text-pink-700 px-4 py-2 rounded-lg text-center font-medium">
+                                                    {typeof service === 'string' ? service : (service && (service.name || service.title)) || 'Service'}
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
+                                )}
 
                                 {/* About */}
                                 <div className="mb-6">
@@ -360,6 +369,7 @@ export default function CreativeProfessional() {
                                 {/* Book Button */}
                                 <button
                                     onClick={() => setShowBookingModal(true)}
+                                    data-booking-trigger
                                     className="w-full bg-gradient-to-r from-pink-600 to-rose-600 text-white py-4 rounded-lg font-bold text-lg hover:from-pink-700 hover:to-rose-700 transition-all duration-300"
                                 >
                                     💳 Book Consultation

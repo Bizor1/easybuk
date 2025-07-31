@@ -275,14 +275,14 @@ export default function Home() {
                 height={40}
                 className="w-10 h-10"
               />
-              <span className="text-2xl font-bold text-gradient-mixed">EasyBuk</span>
+              <span className="text-2xl font-bold text-gradient-mixed navbar-brand">EasyBuk</span>
             </div>
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-8">
-              <Link href="#how-it-works" className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">How It Works</Link>
-              <Link href="#services" className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Services</Link>
-              <Link href="/explore" className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium">Explore</Link>
+              <Link href="#how-it-works" className="navbar-link text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">How It Works</Link>
+              <Link href="#services" className="navbar-link text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Services</Link>
+              <Link href="/explore" className="navbar-link text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium">Explore</Link>
 
               <div
                 className="relative"
@@ -365,9 +365,9 @@ export default function Home() {
                   </div>
                 ) : (
                   <div className="flex items-center space-x-3">
-                    <Link href="/auth/login" className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Sign In</Link>
-                    <Link href="/auth/signup" className="btn-primary">Sign Up</Link>
-                    <Link href="/provider" className="btn-secondary">For Providers</Link>
+                    <Link href="/auth/login" className="navbar-link text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Sign In</Link>
+                    <Link href="/auth/signup" className="btn-primary navbar-button">Sign Up</Link>
+                    <Link href="/provider" className="btn-secondary navbar-button">For Providers</Link>
                   </div>
                 )}
               </div>

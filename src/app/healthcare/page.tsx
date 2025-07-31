@@ -1,10 +1,10 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useAuth } from '@/contexts/AuthContext';
-import NotificationBell from '@/components/NotificationBell';
+import CategoryNavbar from '@/components/CategoryNavbar';
+import { useCategoryData } from '@/hooks/useAPI';
 
 interface HealthcareProfessional {
     id: number;
@@ -29,6 +29,8 @@ export default function Healthcare() {
     const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
     const [searchLocation, setSearchLocation] = useState('');
     const [searchService, setSearchService] = useState('');
+    const [searchBudget, setSearchBudget] = useState('');
+    const [searchKeywords, setSearchKeywords] = useState('');
 
     // Banner carousel data
     const bannerAds = [
@@ -62,62 +64,91 @@ export default function Healthcare() {
         }
     ];
 
-    // State for real healthcare data
-    const [healthcareProfessionals, setHealthcareProfessionals] = useState<HealthcareProfessional[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    // Use SWR for data fetching with caching
+    const { items: rawHealthcareData, isLoading: loading, isError, mutateCategory } = useCategoryData('healthcare');
 
-    // Get authentication state
-    const { user, logout, loading: authLoading } = useAuth();
+    // Transform the data to match the expected format
+    const healthcareProfessionals = useMemo(() => {
+        return rawHealthcareData.map((item: any) => ({
+            id: item.realProviderId || item.id,
+            name: item.name,
+            specialty: item.type === 'professional' ? item.category.charAt(0).toUpperCase() + item.category.slice(1) : item.title,
+            image: item.image,
+            rating: item.rating,
+            reviews: item.reviews || 0,
+            experience: item.type === 'professional' ? "Professional" : "Service Provider",
+            location: item.location,
+            consultation: item.price,
+            availability: item.availability || item.badge,
+            verified: item.isVerified || false,
+            languages: ["English", "Local Languages"],
+            services: item.type === 'professional' ? (item.specialties || item.skills || []).slice(0, 3) : [item.name],
+            type: item.type,
+            realServiceId: item.realServiceId,
+            realProviderId: item.realProviderId
+        }));
+    }, [rawHealthcareData]);
 
-    // Fetch real healthcare professionals and services
-    useEffect(() => {
-        const fetchHealthcareData = async () => {
-            try {
-                setLoading(true);
-                const response = await fetch('/api/explore?category=healthcare&limit=50');
+    // Ghana cities for location dropdown
+    const ghanaCities = [
+        'accra', 'kumasi', 'tamale', 'takoradi', 'tema', 'cape-coast',
+        'ho', 'sunyani', 'koforidua', 'wa', 'bolgatanga', 'techiman'
+    ];
 
-                if (!response.ok) {
-                    throw new Error('Failed to fetch healthcare data');
-                }
+    // Healthcare service categories
+    const healthcareCategories = [
+        'general-practice', 'cardiology', 'neurology', 'pediatrics', 'gynecology',
+        'orthopedics', 'dermatology', 'psychology', 'dentistry', 'physiotherapy'
+    ];
 
-                const data = await response.json();
+    // Enhanced filter logic (similar to professional-services)
+    const filteredProfessionals = useMemo(() => {
+        let filtered = [...healthcareProfessionals];
 
-                if (data.success && data.items) {
-                    // Transform the data to match the expected format
-                    const transformedData = data.items.map((item: any) => ({
-                        id: item.realProviderId || item.id,
-                        name: item.name,
-                        specialty: item.type === 'professional' ? item.category.charAt(0).toUpperCase() + item.category.slice(1) : item.title,
-                        image: item.image,
-                        rating: item.rating,
-                        reviews: item.reviews || 0,
-                        experience: item.type === 'professional' ? "Professional" : "Service Provider",
-                        location: item.location,
-                        consultation: item.price,
-                        availability: item.availability || item.badge,
-                        verified: item.isVerified || false,
-                        languages: ["English", "Local Languages"],
-                        services: item.type === 'professional' ? (item.specialties || item.skills || []).slice(0, 3) : [item.name],
-                        type: item.type,
-                        realServiceId: item.realServiceId,
-                        realProviderId: item.realProviderId
-                    }));
+        // Filter by location
+        if (searchLocation) {
+            filtered = filtered.filter(provider =>
+                provider.location.toLowerCase().includes(searchLocation.toLowerCase())
+            );
+        }
 
-                    setHealthcareProfessionals(transformedData);
-                } else {
-                    throw new Error('Invalid response format');
-                }
-            } catch (err) {
-                console.error('Error fetching healthcare data:', err);
-                setError(err instanceof Error ? err.message : 'Unknown error occurred');
-            } finally {
-                setLoading(false);
+        // Filter by service type
+        if (searchService) {
+            filtered = filtered.filter(provider =>
+                provider.specialty.toLowerCase().includes(searchService.toLowerCase()) ||
+                provider.services.some((service: string) =>
+                    service.toLowerCase().includes(searchService.toLowerCase())
+                )
+            );
+        }
+
+        // Filter by budget
+        if (searchBudget) {
+            const budgetValue = parseFloat(searchBudget.replace(/[^\d.]/g, ''));
+            if (!isNaN(budgetValue)) {
+                filtered = filtered.filter(provider => {
+                    const providerPrice = parseFloat(provider.consultation.replace(/[^\d.]/g, ''));
+                    return !isNaN(providerPrice) && providerPrice <= budgetValue;
+                });
             }
-        };
+        }
 
-        fetchHealthcareData();
-    }, []);
+        // Filter by keywords
+        if (searchKeywords.trim()) {
+            const keywords = searchKeywords.toLowerCase().split(' ');
+            filtered = filtered.filter(provider =>
+                keywords.some(keyword =>
+                    provider.name.toLowerCase().includes(keyword) ||
+                    provider.specialty.toLowerCase().includes(keyword) ||
+                    provider.services.some((service: string) => service.toLowerCase().includes(keyword))
+                )
+            );
+        }
+
+        return filtered;
+    }, [healthcareProfessionals, searchLocation, searchService, searchBudget, searchKeywords]);
+
+    const error = isError ? 'Failed to load healthcare professionals' : null;
 
     // Auto-advance carousel
     useEffect(() => {
@@ -128,81 +159,52 @@ export default function Healthcare() {
     }, [bannerAds.length]);
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+            {/* Custom Styles for Liquid Glass Search */}
+            <style jsx>{`
+                .glass-select {
+                    background: rgba(255, 255, 255, 0.1);
+                    backdrop-filter: blur(20px);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 9999px;
+                    color: white;
+                }
+                
+                .glass-select option {
+                    background: rgba(31, 41, 55, 0.95);
+                    backdrop-filter: blur(20px);
+                    color: white;
+                    padding: 12px 16px;
+                    border: none;
+                    font-size: 14px;
+                    line-height: 1.5;
+                }
+                
+                .glass-select option:hover {
+                    background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(34, 197, 94, 0.3));
+                    backdrop-filter: blur(30px);
+                }
+                
+                .glass-select option:checked,
+                .glass-select option:selected {
+                    background: linear-gradient(135deg, rgba(59, 130, 246, 0.4), rgba(34, 197, 94, 0.4));
+                    color: white;
+                    font-weight: 600;
+                }
+                
+                .glass-select:focus {
+                    outline: none;
+                    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+                }
+            `}</style>
+
             {/* Navigation */}
-            <nav className="fixed top-0 left-0 right-0 z-50 glass backdrop-blur-md">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center h-16">
-                        <Link href="/" className="flex items-center space-x-3">
-                            <Image
-                                src="https://res.cloudinary.com/duhfv8nqy/image/upload/v1749030696/easybuklogo_ity2xt.png"
-                                alt="EasyBuk Logo"
-                                width={40}
-                                height={40}
-                                className="w-10 h-10"
-                            />
-                            <span className="text-2xl font-bold text-gradient-mixed">EasyBuk</span>
-                        </Link>
-
-                        <div className="flex items-center space-x-4">
-                            <Link href="/" className="text-gray-700 hover:text-blue-600 transition-colors">← Back to Home</Link>
-
-                            {/* Authentication Section */}
-                            {authLoading ? (
-                                <div className="animate-pulse bg-gray-200 h-10 w-20 rounded-lg"></div>
-                            ) : user ? (
-                                <div className="flex items-center space-x-3">
-                                    {/* Notification Bell */}
-                                    <NotificationBell userType={user.roles.includes('PROVIDER') ? 'PROVIDER' : 'CLIENT'} />
-
-                                    <div className="flex items-center space-x-2">
-                                        <Image
-                                            src={user.image || '/default-avatar.svg'}
-                                            alt={user.name || 'User'}
-                                            width={32}
-                                            height={32}
-                                            className="w-8 h-8 rounded-full"
-                                        />
-                                        <div className="relative group">
-                                            <button className="flex items-center space-x-1 text-gray-700 hover:text-blue-600 transition-colors">
-                                                <span className="text-sm font-medium">{user.name}</span>
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                                </svg>
-                                            </button>
-
-                                            <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                                                <div className="py-2">
-                                                    <Link
-                                                        href={user.roles.includes('PROVIDER') ? '/provider/dashboard' : '/client/dashboard'}
-                                                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                                                    >
-                                                        Dashboard
-                                                    </Link>
-                                                    <button
-                                                        onClick={logout}
-                                                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                                                    >
-                                                        Sign Out
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="flex items-center space-x-3">
-                                    <Link href="/auth/login" className="text-gray-700 hover:text-blue-600 transition-colors">Sign In</Link>
-                                    <Link href="/auth/signup" className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-2 rounded-lg transition-all duration-300">Sign Up</Link>
-                                    <Link href="/auth/signup?role=provider" className="border border-blue-600 text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg transition-colors">For Providers</Link>
-                                </div>
-                            )}
-
-                            <Link href="/contact" className="btn-secondary">Contact Us</Link>
-                        </div>
-                    </div>
-                </div>
-            </nav>
+            <CategoryNavbar
+                backText="← Back to Home"
+                backHref="/"
+                hoverColor="text-blue-600 dark:hover:text-blue-400"
+                bgGradient="from-blue-50 via-white to-green-50"
+            />
 
             {/* Hero Banner Carousel */}
             <section className="relative pt-16 h-screen overflow-hidden">
@@ -257,78 +259,184 @@ export default function Healthcare() {
                         </div>
                     </div>
 
-                    {/* Enhanced Glassmorphism Search Overlay */}
-                    <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2 w-full max-w-6xl px-4">
+                    {/* Sleek Liquid Glass Search Bar */}
+                    <div className="absolute bottom-4 sm:bottom-12 left-1/2 transform -translate-x-1/2 w-full max-w-7xl px-2 sm:px-4">
                         <div className="relative group">
                             {/* Glow effect */}
-                            <div className="absolute -inset-1 bg-gradient-to-r from-blue-600/20 to-green-600/20 rounded-3xl blur-xl group-hover:blur-2xl transition-all duration-300"></div>
+                            <div className="absolute -inset-1 bg-gradient-to-r from-blue-400/20 to-green-400/20 rounded-2xl sm:rounded-full blur-lg group-hover:blur-xl transition-all duration-300"></div>
 
                             {/* Main search container */}
-                            <div className="relative bg-white/10 backdrop-blur-2xl rounded-2xl p-6 shadow-2xl border border-white/20 hover:border-white/30 transition-all duration-300">
-                                {/* Subtle background pattern */}
-                                <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent rounded-2xl"></div>
+                            <div className="relative bg-white/10 backdrop-blur-3xl rounded-2xl sm:rounded-full px-3 sm:px-6 py-3 sm:py-3 shadow-2xl border border-white/20 hover:border-white/30 transition-all duration-300">
 
-                                <div className="relative z-10">
-                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                                        <div className="space-y-2">
-                                            <div className="relative">
-                                                <select
-                                                    value={searchLocation}
-                                                    onChange={(e) => setSearchLocation(e.target.value)}
-                                                    className="w-full px-4 py-4 pr-10 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder-white/60 focus:ring-2 focus:ring-blue-400/50 focus:border-white/40 transition-all duration-300 hover:bg-white/15 appearance-none cursor-pointer"
-                                                >
-                                                    <option value="" className="bg-gray-800 text-white">📍 Select Location</option>
-                                                    <option value="accra" className="bg-gray-800 text-white">Accra</option>
-                                                    <option value="kumasi" className="bg-gray-800 text-white">Kumasi</option>
-                                                    <option value="tamale" className="bg-gray-800 text-white">Tamale</option>
-                                                    <option value="cape-coast" className="bg-gray-800 text-white">Cape Coast</option>
-                                                </select>
-                                                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                                    <svg className="w-5 h-5 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                                    </svg>
-                                                </div>
+                                {/* Mobile Layout (Stacked) */}
+                                <div className="block sm:hidden space-y-3">
+                                    {/* Row 1: Location and Service */}
+                                    <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                            <select
+                                                value={searchLocation}
+                                                onChange={(e) => setSearchLocation(e.target.value)}
+                                                className="w-full px-3 py-3 bg-white/10 backdrop-blur-md border-0 rounded-full text-white text-sm placeholder-white/70 focus:ring-2 focus:ring-blue-400/50 transition-all duration-300 hover:bg-white/15 appearance-none cursor-pointer glass-select"
+                                            >
+                                                <option value="">📍 Location</option>
+                                                {ghanaCities.map((city) => (
+                                                    <option key={city} value={city}>
+                                                        {city.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                                <svg className="w-4 h-4 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                </svg>
                                             </div>
                                         </div>
-
-                                        <div className="space-y-2">
-                                            <div className="relative">
-                                                <select
-                                                    value={searchService}
-                                                    onChange={(e) => setSearchService(e.target.value)}
-                                                    className="w-full px-4 py-4 pr-10 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder-white/60 focus:ring-2 focus:ring-blue-400/50 focus:border-white/40 transition-all duration-300 hover:bg-white/15 appearance-none cursor-pointer"
-                                                >
-                                                    <option value="" className="bg-gray-800 text-white">🏥 Healthcare Service</option>
-                                                    <option value="general" className="bg-gray-800 text-white">General Practice</option>
-                                                    <option value="specialist" className="bg-gray-800 text-white">Specialist Consultation</option>
-                                                    <option value="nursing" className="bg-gray-800 text-white">Nursing Care</option>
-                                                    <option value="emergency" className="bg-gray-800 text-white">Emergency Services</option>
-                                                    <option value="mental-health" className="bg-gray-800 text-white">Mental Health</option>
-                                                </select>
-                                                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                                    <svg className="w-5 h-5 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                                    </svg>
-                                                </div>
+                                        <div className="relative flex-1">
+                                            <select
+                                                value={searchService}
+                                                onChange={(e) => setSearchService(e.target.value)}
+                                                className="w-full px-3 py-3 bg-white/10 backdrop-blur-md border-0 rounded-full text-white text-sm placeholder-white/70 focus:ring-2 focus:ring-blue-400/50 transition-all duration-300 hover:bg-white/15 appearance-none cursor-pointer glass-select"
+                                            >
+                                                <option value="">🏥 Service</option>
+                                                {healthcareCategories.map((category) => (
+                                                    <option key={category} value={category}>
+                                                        {category.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                                <svg className="w-4 h-4 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                </svg>
                                             </div>
                                         </div>
+                                    </div>
 
-                                        <div className="space-y-2">
-                                            <div className="relative">
-                                                <input
-                                                    type="text"
-                                                    placeholder="💰 Budget (e.g., GH₵50-100)"
-                                                    className="w-full px-4 py-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder-white/60 focus:ring-2 focus:ring-blue-400/50 focus:border-white/40 transition-all duration-300 hover:bg-white/15"
-                                                />
-                                            </div>
+                                    {/* Row 2: Budget and Keywords */}
+                                    <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                            <input
+                                                type="text"
+                                                placeholder="💰 Budget"
+                                                value={searchBudget}
+                                                onChange={(e) => setSearchBudget(e.target.value)}
+                                                className="w-full px-3 py-3 bg-white/10 backdrop-blur-md border-0 rounded-full text-white text-sm placeholder-white/70 focus:ring-2 focus:ring-blue-400/50 transition-all duration-300 hover:bg-white/15"
+                                            />
                                         </div>
+                                        <div className="relative flex-1">
+                                            <input
+                                                type="text"
+                                                placeholder="🔍 Keywords"
+                                                value={searchKeywords}
+                                                onChange={(e) => setSearchKeywords(e.target.value)}
+                                                className="w-full px-3 py-3 bg-white/10 backdrop-blur-md border-0 rounded-full text-white text-sm placeholder-white/70 focus:ring-2 focus:ring-blue-400/50 transition-all duration-300 hover:bg-white/15"
+                                            />
+                                        </div>
+                                    </div>
 
-                                        <div>
-                                            <button className="w-full bg-gradient-to-r from-blue-500/80 to-green-500/80 backdrop-blur-md text-white py-4 px-6 rounded-xl font-bold text-lg hover:from-blue-600/90 hover:to-green-600/90 transition-all duration-300 hover:scale-105 shadow-lg flex items-center justify-center space-x-2 border border-white/20">
-                                                <span>🔍</span>
-                                                <span>Find Providers</span>
-                                            </button>
+                                    {/* Row 3: Action Buttons */}
+                                    <div className="flex gap-2">
+                                        <button className="flex-1 bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white px-4 py-3 rounded-full font-semibold text-sm transition-all duration-300 hover:scale-105 shadow-lg flex items-center justify-center gap-2 border border-white/20">
+                                            <span>🔍</span>
+                                            <span>Search</span>
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setSearchLocation('');
+                                                setSearchService('');
+                                                setSearchBudget('');
+                                                setSearchKeywords('');
+                                            }}
+                                            className="bg-white/20 hover:bg-white/30 text-white px-4 py-3 rounded-full font-medium text-sm transition-all duration-300 border border-white/20"
+                                        >
+                                            Reset
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Desktop Layout (Horizontal) */}
+                                <div className="hidden sm:flex items-center gap-3">
+                                    {/* Location Selector */}
+                                    <div className="relative min-w-[160px]">
+                                        <select
+                                            value={searchLocation}
+                                            onChange={(e) => setSearchLocation(e.target.value)}
+                                            className="w-full px-4 py-2.5 bg-white/10 backdrop-blur-md border-0 rounded-full text-white text-sm placeholder-white/70 focus:ring-2 focus:ring-blue-400/50 transition-all duration-300 hover:bg-white/15 appearance-none cursor-pointer glass-select"
+                                        >
+                                            <option value="">📍 Select Location</option>
+                                            {ghanaCities.map((city) => (
+                                                <option key={city} value={city}>
+                                                    {city.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                            <svg className="w-4 h-4 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
                                         </div>
+                                    </div>
+
+                                    {/* Service Type Selector */}
+                                    <div className="relative min-w-[160px]">
+                                        <select
+                                            value={searchService}
+                                            onChange={(e) => setSearchService(e.target.value)}
+                                            className="w-full px-4 py-2.5 bg-white/10 backdrop-blur-md border-0 rounded-full text-white text-sm placeholder-white/70 focus:ring-2 focus:ring-blue-400/50 transition-all duration-300 hover:bg-white/15 appearance-none cursor-pointer glass-select"
+                                        >
+                                            <option value="">🏥 Healthcare Service</option>
+                                            {healthcareCategories.map((category) => (
+                                                <option key={category} value={category}>
+                                                    {category.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                            <svg className="w-4 h-4 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </div>
+                                    </div>
+
+                                    {/* Budget Input */}
+                                    <div className="relative min-w-[140px]">
+                                        <input
+                                            type="text"
+                                            placeholder="💰 Budget (e.g., GH₵100)"
+                                            value={searchBudget}
+                                            onChange={(e) => setSearchBudget(e.target.value)}
+                                            className="w-full px-4 py-2.5 bg-white/10 backdrop-blur-md border-0 rounded-full text-white text-sm placeholder-white/70 focus:ring-2 focus:ring-blue-400/50 transition-all duration-300 hover:bg-white/15"
+                                        />
+                                    </div>
+
+                                    {/* Keywords Input */}
+                                    <div className="relative flex-1 min-w-[180px]">
+                                        <input
+                                            type="text"
+                                            placeholder="🔍 Keywords (e.g., surgery, diabetes)"
+                                            value={searchKeywords}
+                                            onChange={(e) => setSearchKeywords(e.target.value)}
+                                            className="w-full px-4 py-2.5 bg-white/10 backdrop-blur-md border-0 rounded-full text-white text-sm placeholder-white/70 focus:ring-2 focus:ring-blue-400/50 transition-all duration-300 hover:bg-white/15"
+                                        />
+                                    </div>
+
+                                    {/* Action Buttons */}
+                                    <div className="flex items-center gap-2">
+                                        <button className="bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white px-6 py-2.5 rounded-full font-semibold text-sm transition-all duration-300 hover:scale-105 shadow-lg flex items-center gap-2 border border-white/20">
+                                            <span>🔍</span>
+                                            <span>Find Healthcare</span>
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setSearchLocation('');
+                                                setSearchService('');
+                                                setSearchBudget('');
+                                                setSearchKeywords('');
+                                            }}
+                                            className="bg-white/20 hover:bg-white/30 text-white px-4 py-2.5 rounded-full font-medium text-sm transition-all duration-300 border border-white/20"
+                                        >
+                                            Reset
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -375,82 +483,112 @@ export default function Healthcare() {
                             <p className="text-gray-500">Please try again later or check other categories.</p>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            {healthcareProfessionals.map((professional) => (
-                                <div key={professional.id} className="bg-white rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300 overflow-hidden">
-                                    <div className="p-6">
-                                        <div className="flex items-start space-x-4">
-                                            <div className="relative">
-                                                <Image
-                                                    src={professional.image}
-                                                    alt={professional.name}
-                                                    width={80}
-                                                    height={80}
-                                                    className="rounded-full object-cover"
-                                                />
-                                                {professional.verified && (
-                                                    <div className="absolute -bottom-1 -right-1 bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">
-                                                        ✓
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                            {filteredProfessionals.map((professional) => (
+                                <div key={professional.id} className="group relative">
+                                    {/* Card Container with Glass Effect */}
+                                    <div className="absolute inset-0 bg-gradient-to-br from-blue-400/10 via-transparent to-green-400/10 rounded-3xl blur-xl group-hover:blur-2xl transition-all duration-500"></div>
+
+                                    <div className="relative bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 dark:border-slate-700/50 hover:shadow-3xl hover:scale-[1.02] transition-all duration-500 overflow-hidden">
+
+                                        {/* Header with Image and Status */}
+                                        <div className="relative p-6 pb-0">
+                                            <div className="flex items-start justify-between mb-4">
+                                                <div className="relative">
+                                                    <div className="w-20 h-20 rounded-2xl overflow-hidden ring-4 ring-white/50 shadow-lg">
+                                                        <Image
+                                                            src={professional.image}
+                                                            alt={professional.name}
+                                                            width={80}
+                                                            height={80}
+                                                            className="w-full h-full object-cover"
+                                                        />
                                                     </div>
+                                                    {professional.verified && (
+                                                        <div className="absolute -bottom-2 -right-2 bg-gradient-to-r from-blue-500 to-green-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg ring-2 ring-white">
+                                                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                            </svg>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div className="flex flex-col items-end gap-2">
+                                                    <span className={`px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-md ${professional.availability === 'Available now'
+                                                        ? 'bg-green-500/20 text-green-700 dark:text-green-300 border border-green-500/30'
+                                                        : professional.availability === 'Available today'
+                                                            ? 'bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30'
+                                                            : 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                                                        }`}>
+                                                        {typeof professional.availability === 'string' ? professional.availability : 'Available'}
+                                                    </span>
+
+                                                    <div className="text-right">
+                                                        <div className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
+                                                            {professional.consultation}
+                                                        </div>
+                                                        <div className="text-xs text-gray-500 dark:text-gray-400">per consultation</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <h3 className="text-xl font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                                    {professional.name}
+                                                </h3>
+                                                <p className="text-blue-600 dark:text-blue-400 font-semibold">{professional.specialty}</p>
+                                                <p className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-1">
+                                                    <span>📍</span>
+                                                    <span>{professional.location}</span>
+                                                    <span>•</span>
+                                                    <span>{professional.experience} experience</span>
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Rating and Reviews */}
+                                        <div className="px-6 py-3">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-yellow-500 text-lg">⭐</span>
+                                                        <span className="font-bold text-gray-900 dark:text-white">{professional.rating}</span>
+                                                    </div>
+                                                    <span className="text-sm text-gray-500 dark:text-gray-400">({professional.reviews} reviews)</span>
+                                                </div>
+
+                                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                    💬 {professional.languages.join(', ')}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Services Tags */}
+                                        <div className="px-6 pb-6">
+                                            <div className="flex flex-wrap gap-2 mb-4">
+                                                {professional.services.slice(0, 3).map((service, index) => (
+                                                    <span key={index} className="bg-blue-500/10 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full text-xs font-medium border border-blue-500/20 backdrop-blur-sm">
+                                                        {service}
+                                                    </span>
+                                                ))}
+                                                {professional.services.length > 3 && (
+                                                    <span className="bg-gray-500/10 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full text-xs font-medium border border-gray-500/20 backdrop-blur-sm">
+                                                        +{professional.services.length - 3} more
+                                                    </span>
                                                 )}
                                             </div>
 
-                                            <div className="flex-1">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <h3 className="text-xl font-bold text-gray-800">{professional.name}</h3>
-                                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${professional.availability === 'Available now'
-                                                        ? 'bg-green-100 text-green-800'
-                                                        : professional.availability === 'Available today'
-                                                            ? 'bg-blue-100 text-blue-800'
-                                                            : 'bg-yellow-100 text-yellow-800'
-                                                        }`}>
-                                                        {typeof professional.availability === 'string' ? professional.availability : 'Available for booking'}
-                                                    </span>
-                                                </div>
-
-                                                <p className="text-blue-600 font-medium mb-1">{professional.specialty}</p>
-                                                <p className="text-gray-500 text-sm mb-2">📍 {professional.location} • {professional.experience} experience</p>
-
-                                                <div className="flex items-center space-x-4 mb-3">
-                                                    <div className="flex items-center">
-                                                        <span className="text-yellow-400 mr-1">⭐</span>
-                                                        <span className="font-bold text-gray-800">{professional.rating}</span>
-                                                        <span className="text-gray-500 text-sm ml-1">({professional.reviews} reviews)</span>
-                                                    </div>
-                                                    <div className="text-2xl font-bold text-blue-600">{professional.consultation}</div>
-                                                </div>
-
-                                                <div className="flex items-center space-x-2 mb-4">
-                                                    <span className="text-sm text-gray-600">Languages:</span>
-                                                    {professional.languages.map((lang, index) => (
-                                                        <span key={index} className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
-                                                            {lang}
-                                                        </span>
-                                                    ))}
-                                                </div>
-
-                                                <div className="mb-4">
-                                                    <p className="text-sm text-gray-600 mb-1">Services:</p>
-                                                    <div className="flex flex-wrap gap-1">
-                                                        {professional.services.map((service, index) => (
-                                                            <span key={index} className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs">
-                                                                {service}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex space-x-3">
-                                                    <Link
-                                                        href={`/healthcare/professional/${professional.id}`}
-                                                        className="flex-1 bg-gradient-to-r from-blue-600 to-green-600 text-white py-2 px-4 rounded-lg font-bold text-center hover:from-blue-700 hover:to-green-700 transition-all duration-300"
-                                                    >
-                                                        View Profile & Book
-                                                    </Link>
-                                                    <button className="border border-blue-600 text-blue-600 py-2 px-4 rounded-lg font-bold hover:bg-blue-50 transition-colors">
-                                                        💬 Message
-                                                    </button>
-                                                </div>
+                                            {/* Action Buttons */}
+                                            <div className="flex gap-3">
+                                                <Link
+                                                    href={`/healthcare/professional/${professional.id}`}
+                                                    className="flex-1 bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white py-3 px-4 rounded-2xl font-semibold text-center transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl backdrop-blur-sm border border-white/20"
+                                                >
+                                                    View Profile & Book
+                                                </Link>
+                                                <button className="bg-white/20 dark:bg-slate-700/50 backdrop-blur-md border border-blue-500/30 text-blue-600 dark:text-blue-400 py-3 px-4 rounded-2xl font-semibold hover:bg-blue-500/10 transition-all duration-300 hover:scale-105">
+                                                    💬
+                                                </button>
                                             </div>
                                         </div>
                                     </div>

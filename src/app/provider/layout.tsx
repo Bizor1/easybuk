@@ -298,7 +298,7 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
                                 height={24}
                                 className="w-6 h-6"
                             />
-                            <span className="text-lg font-bold text-gray-900 dark:text-white">EasyBuk Pro</span>
+                            <span className="text-lg font-bold text-gray-900 dark:text-white navbar-brand">EasyBuk Pro</span>
                         </Link>
                         <div className="flex items-center space-x-3">
                             <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">

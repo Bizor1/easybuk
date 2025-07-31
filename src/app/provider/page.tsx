@@ -205,14 +205,14 @@ export default function ProviderPage() {
                                 height={40}
                                 className="w-10 h-10"
                             />
-                            <span className="text-2xl font-bold text-gradient-mixed">EasyBuk</span>
+                            <span className="text-2xl font-bold text-gradient-mixed navbar-brand">EasyBuk</span>
                         </Link>
 
                         <div className="hidden md:flex items-center space-x-8">
-                            <Link href="#how-it-works" className="text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 transition-colors">How It Works</Link>
-                            <Link href="#success-stories" className="text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 transition-colors">Success Stories</Link>
-                            <Link href="#pricing" className="text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 transition-colors">Pricing</Link>
-                            <Link href="/" className="btn-secondary">For Clients</Link>
+                            <Link href="#how-it-works" className="navbar-link text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 transition-colors">How It Works</Link>
+                            <Link href="#success-stories" className="navbar-link text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 transition-colors">Success Stories</Link>
+                            <Link href="#pricing" className="navbar-link text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 transition-colors">Pricing</Link>
+                            <Link href="/" className="btn-secondary navbar-button">For Clients</Link>
                         </div>
 
                         {/* Mobile menu button */}

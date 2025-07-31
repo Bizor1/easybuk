@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import BookingForm from '@/components/BookingForm';
 import SimpleNotificationBell from '@/components/SimpleNotificationBell';
+import { useExploreData } from '@/hooks/useAPI';
 
 // Type definitions
 interface BaseItem {
@@ -83,10 +84,20 @@ export default function Explore() {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [sortBy, setSortBy] = useState('trending');
-    const [items, setItems] = useState<ExploreItem[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [additionalItems, setAdditionalItems] = useState<ExploreItem[]>([]);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(true);
     const [page, setPage] = useState(1);
+
+    // Use SWR for initial data with caching
+    const searchParams = new URLSearchParams({
+        page: '1',
+        limit: '20',
+        category: selectedCategory,
+        search: searchQuery,
+        sortBy: sortBy
+    }).toString();
+    const { professionals: initialItems, isLoading, isError, mutateExplore } = useExploreData(searchParams);
     const [showFilters, setShowFilters] = useState(false);
     const [priceRange, setPriceRange] = useState([0, 1000]);
     const [selectedRating, setSelectedRating] = useState(0);
@@ -121,11 +132,11 @@ export default function Explore() {
 
     // No more mock data - fetching real data from API
 
-    // Load more items (infinite scroll)
+    // Load more items (infinite scroll) - only for additional pages
     const loadMoreItems = useCallback(async () => {
-        if (loading || !hasMore) return;
+        if (loadingMore || !hasMore || page === 1) return;
 
-        setLoading(true);
+        setLoadingMore(true);
 
         try {
             const params = new URLSearchParams({
@@ -140,7 +151,7 @@ export default function Explore() {
             if (response.ok) {
                 const data = await response.json();
                 if (data.success) {
-                    setItems(prev => [...prev, ...data.items]);
+                    setAdditionalItems(prev => [...prev, ...data.items]);
                     setPage(prev => prev + 1);
                     setHasMore(data.pagination.hasMore);
                 } else {
@@ -155,54 +166,24 @@ export default function Explore() {
             setHasMore(false);
         }
 
-        setLoading(false);
-    }, [loading, hasMore, page, selectedCategory, searchQuery, sortBy]);
+        setLoadingMore(false);
+    }, [loadingMore, hasMore, page, selectedCategory, searchQuery, sortBy]);
 
-    // Initialize with first load
+    // Reset additional items and pagination when filters change
     useEffect(() => {
-        const fetchInitialData = async () => {
-            setLoading(true);
-            setItems([]); // Clear existing items when filters change
-            setPage(1); // Reset page to 1
-            setHasMore(true); // Reset hasMore
-
-            try {
-                const params = new URLSearchParams({
-                    page: '1',
-                    limit: '20',
-                    category: selectedCategory,
-                    search: searchQuery,
-                    sortBy: sortBy
-                });
-
-                const response = await fetch(`/api/explore?${params}`);
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.success) {
-                        setItems(data.items);
-                        setPage(2);
-                        setHasMore(data.pagination.hasMore);
-                    } else {
-                        console.error('Failed to fetch initial data');
-                        setItems([]);
-                    }
-                } else {
-                    console.error('Failed to fetch initial data');
-                    setItems([]);
-                }
-            } catch (error) {
-                console.error('Error fetching initial data:', error);
-                setItems([]);
-            }
-            setLoading(false);
-        };
-
-        fetchInitialData();
+        setAdditionalItems([]); // Clear additional items when filters change
+        setPage(2); // Reset page to 2 (since SWR handles page 1)
+        setHasMore(true); // Reset hasMore
     }, [selectedCategory, searchQuery, sortBy]);
+
+    // Combine initial SWR data with additional infinite scroll data
+    const allItems = useMemo(() => {
+        return [...(initialItems || []), ...additionalItems];
+    }, [initialItems, additionalItems]);
 
     // Infinite scroll observer
     const lastItemRef = useCallback((node: HTMLDivElement | null) => {
-        if (loading) return;
+        if (isLoading || loadingMore) return;
         if (observer.current) observer.current.disconnect();
         observer.current = new IntersectionObserver(entries => {
             if (entries[0].isIntersecting && hasMore) {
@@ -210,10 +191,10 @@ export default function Explore() {
             }
         });
         if (node) observer.current.observe(node);
-    }, [loading, hasMore, loadMoreItems]);
+    }, [isLoading, loadingMore, hasMore, loadMoreItems]);
 
     // Filter items based on category and search
-    const filteredItems = items.filter(item => {
+    const filteredItems = allItems.filter((item: ExploreItem) => {
         const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
         const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             item.title.toLowerCase().includes(searchQuery.toLowerCase());
@@ -330,14 +311,6 @@ export default function Explore() {
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
             {/* Custom Styles */}
             <style jsx>{`
-                .glass-nav {
-                    background: rgba(248, 250, 252, 0.9);
-                    backdrop-filter: blur(20px);
-                }
-                
-                .dark .glass-nav {
-                    background: rgba(15, 23, 42, 0.9);
-                }
                 
                 .clean-button {
                     background: linear-gradient(135deg, #1a5173, #2d6591);
@@ -444,7 +417,7 @@ export default function Explore() {
             `}</style>
 
             {/* Navigation */}
-            <nav className="fixed top-0 left-0 right-0 z-50 glass-nav border-b border-gray-200 dark:border-gray-700">
+            <nav className="fixed top-0 left-0 right-0 z-50 glass backdrop-blur-md">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center h-16">
                         <Link href="/" className="flex items-center space-x-3 group">
@@ -458,7 +431,7 @@ export default function Explore() {
                                 />
                                 <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-orange-500 rounded-full opacity-0 group-hover:opacity-20 blur transition-opacity"></div>
                             </div>
-                            <span className="text-2xl font-bold text-gray-900 dark:text-white">EasyBuk</span>
+                            <span className="text-2xl font-bold text-gradient-mixed navbar-brand">EasyBuk</span>
                         </Link>
 
                         <div className="flex items-center space-x-4">
@@ -466,7 +439,7 @@ export default function Explore() {
                                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                                 <span>{liveCount.toLocaleString()} online</span>
                             </div>
-                            <Link href="/" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors">Home</Link>
+                            <Link href="/" className="navbar-link text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors">Home</Link>
 
                             {authLoading ? (
                                 // Loading state
@@ -487,7 +460,7 @@ export default function Explore() {
                                     {/* Dashboard Link */}
                                     <Link
                                         href={user.activeRole === 'PROVIDER' ? '/provider/dashboard' : '/client/dashboard'}
-                                        className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
+                                        className="navbar-link text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
                                     >
                                         Dashboard
                                     </Link>
@@ -496,7 +469,7 @@ export default function Explore() {
                                     <div className="relative profile-dropdown">
                                         <button
                                             onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-                                            className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
+                                            className="navbar-link flex items-center space-x-2 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
                                         >
                                             <Image
                                                 src={user.image || '/default-avatar.svg'}
@@ -515,7 +488,7 @@ export default function Explore() {
 
                                         {/* Dropdown Menu */}
                                         {isProfileDropdownOpen && (
-                                            <div className="absolute top-full right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 transition-all duration-300 z-50 backdrop-blur-xl animate-fadeInUp">
+                                            <div className="profile-dropdown absolute top-full right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 transition-all duration-300 z-50 backdrop-blur-xl animate-fadeInUp">
                                                 <div className="py-2">
                                                     <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
                                                         <p className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</p>
@@ -569,8 +542,8 @@ export default function Explore() {
                             ) : (
                                 // Guest navigation
                                 <div className="flex items-center space-x-4">
-                                    <Link href="/auth/login" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors">Sign In</Link>
-                                    <Link href="/auth/signup" className="clean-button text-white px-4 py-2 rounded-lg font-medium">Sign Up</Link>
+                                    <Link href="/auth/login" className="navbar-link text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors">Sign In</Link>
+                                    <Link href="/auth/signup" className="btn-primary navbar-button">Sign Up</Link>
                                 </div>
                             )}
                         </div>
@@ -628,7 +601,7 @@ export default function Explore() {
                                             placeholder="Search doctors, designers, developers..."
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
-                                            className="w-full pl-12 pr-4 py-3 bg-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-lg focus:outline-none"
+                                            className="w-full pl-12 pr-4 py-3 sm:py-4 bg-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-base sm:text-lg focus:outline-none mobile-search-input"
                                         />
                                     </div>
 
@@ -652,17 +625,19 @@ export default function Explore() {
                                 </div>
 
                                 {/* Quick Suggestions */}
-                                <div className="mt-4 flex flex-wrap gap-2">
-                                    <span className="text-gray-500 dark:text-gray-400 text-sm">Popular:</span>
-                                    {['Doctors', 'Web Design', 'Home Cleaning', 'Tutoring', 'Legal Help'].map((term, idx) => (
-                                        <button
-                                            key={idx}
-                                            onClick={() => setSearchQuery(term)}
-                                            className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full text-sm transition-all duration-200 hover:scale-105"
-                                        >
-                                            {term}
-                                        </button>
-                                    ))}
+                                <div className="mt-4">
+                                    <span className="text-gray-500 dark:text-gray-400 text-sm block sm:inline mb-2 sm:mb-0">Popular:</span>
+                                    <div className="flex flex-wrap gap-2 mt-2 sm:mt-0 sm:inline-flex sm:ml-2">
+                                        {['Doctors', 'Web Design', 'Home Cleaning', 'Tutoring', 'Legal Help'].map((term, idx) => (
+                                            <button
+                                                key={idx}
+                                                onClick={() => setSearchQuery(term)}
+                                                className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 sm:px-3 sm:py-1 rounded-full text-sm font-medium transition-all duration-200 hover:scale-105 min-h-[40px] sm:min-h-auto flex items-center justify-center"
+                                            >
+                                                {term}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -671,24 +646,24 @@ export default function Explore() {
             </section>
 
             {/* Categories & Filters */}
-            <section className="py-6 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-b border-gray-200 dark:border-gray-700 sticky top-16 z-40">
+            <section className="py-4 sm:py-6 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-b border-gray-200 dark:border-gray-700 sticky top-16 z-40">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between mb-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 sm:mb-6">
                         {/* Smooth Categories */}
-                        <div className="flex items-center space-x-3 overflow-x-auto category-scroll pb-2">
+                        <div className="flex items-center space-x-2 sm:space-x-3 overflow-x-auto category-scroll pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
                             {categories.map((category) => (
                                 <Link
                                     key={category.id}
                                     href={category.id === 'all' ? '/explore' : `/${category.id === 'home' ? 'home-services' : category.id === 'professional' ? 'professional-services' : category.id === 'technical' ? 'technical' : category.id}`}
-                                    className={`relative flex items-center space-x-2 px-4 py-2 rounded-xl font-medium whitespace-nowrap transition-all duration-300 transform hover:scale-105 ${selectedCategory === category.id
+                                    className={`relative flex items-center space-x-2 px-3 py-2 sm:px-4 sm:py-2 rounded-xl font-medium whitespace-nowrap transition-all duration-300 transform hover:scale-105 min-h-[48px] sm:min-h-auto ${selectedCategory === category.id
                                         ? `bg-gradient-to-r ${category.color} text-white shadow-lg`
                                         : 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600'
                                         }`}
                                 >
-                                    <span className="text-lg">{category.icon}</span>
+                                    <span className="text-lg sm:text-base">{category.icon}</span>
                                     <div className="flex flex-col items-start">
-                                        <span className="text-sm font-medium">{category.name}</span>
-                                        <span className="text-xs opacity-75">{category.count}</span>
+                                        <span className="text-xs sm:text-sm font-medium">{category.name}</span>
+                                        <span className="text-[10px] sm:text-xs opacity-75">{category.count}</span>
                                     </div>
                                 </Link>
                             ))}
@@ -697,10 +672,10 @@ export default function Explore() {
                         {/* Filters Toggle */}
                         <button
                             onClick={() => setShowFilters(!showFilters)}
-                            className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-xl transition-all duration-300 border border-gray-200 dark:border-gray-600"
+                            className="flex items-center justify-center sm:justify-start space-x-2 px-4 py-3 sm:py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-xl transition-all duration-300 border border-gray-200 dark:border-gray-600 min-h-[48px] sm:min-h-auto font-medium"
                         >
-                            <span>⚙️</span>
-                            <span>Filters</span>
+                            <span className="text-lg sm:text-base">⚙️</span>
+                            <span className="text-sm sm:text-base">Filters</span>
                             <div className={`transition-transform duration-300 ${showFilters ? 'rotate-180' : ''}`}>⌄</div>
                         </button>
                     </div>
@@ -817,20 +792,20 @@ export default function Explore() {
             </section>
 
             {/* Trending Banner */}
-            <section className="py-4 bg-gradient-to-r from-blue-50 to-orange-50 dark:from-blue-900/20 dark:to-orange-900/20 border-b border-gray-200 dark:border-gray-700">
+            <section className="py-3 sm:py-4 bg-gradient-to-r from-blue-50 to-orange-50 dark:from-blue-900/20 dark:to-orange-900/20 border-b border-gray-200 dark:border-gray-700">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
                         <div className="flex items-center space-x-3">
-                            <div className="text-2xl animate-bounce">🔥</div>
+                            <div className="text-xl sm:text-2xl animate-bounce">🔥</div>
                             <div>
-                                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Trending Right Now</h3>
-                                <p className="text-gray-600 dark:text-gray-400 text-sm">Most booked services in the last 24 hours</p>
+                                <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">Trending Right Now</h3>
+                                <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">Most booked services in the last 24 hours</p>
                             </div>
                         </div>
-                        <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
+                        <div className="flex items-center space-x-2 sm:space-x-4 text-xs sm:text-sm text-gray-600 dark:text-gray-400 ml-8 sm:ml-0">
                             <div className="flex items-center space-x-1">
-                                <span>📈</span>
-                                <span>+127% bookings today</span>
+                                <span className="text-sm sm:text-base">📈</span>
+                                <span className="font-medium">+127% bookings today</span>
                             </div>
                         </div>
                     </div>
@@ -838,25 +813,25 @@ export default function Explore() {
             </section>
 
             {/* Results Section */}
-            <section className="py-8 min-h-screen">
+            <section className="py-6 sm:py-8 min-h-screen">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     {/* Results Header */}
-                    <div className="flex items-center justify-between mb-8">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
                         <div>
-                            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2">
                                 Discover Amazing Professionals
                             </h2>
-                            <p className="text-gray-600 dark:text-gray-400">
+                            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
                                 Showing {filteredItems.length} results
                                 {selectedCategory !== 'all' && ` in ${categories.find(c => c.id === selectedCategory)?.name}`}
                                 {searchQuery && ` for "${searchQuery}"`}
                             </p>
                         </div>
-                        <div className="flex items-center space-x-3">
-                            <button className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-all duration-300 border border-gray-200 dark:border-gray-600">
+                        <div className="flex items-center space-x-2 sm:space-x-3">
+                            <button className="px-3 py-2 sm:px-4 sm:py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-all duration-300 border border-gray-200 dark:border-gray-600 text-xs sm:text-sm font-medium">
                                 📊 Analytics
                             </button>
-                            <button className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-all duration-300 border border-gray-200 dark:border-gray-600">
+                            <button className="px-3 py-2 sm:px-4 sm:py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-all duration-300 border border-gray-200 dark:border-gray-600 text-xs sm:text-sm font-medium">
                                 💾 Save Search
                             </button>
                         </div>
@@ -1151,10 +1126,10 @@ export default function Explore() {
                         <div className="text-center mt-12">
                             <button
                                 onClick={loadMoreItems}
-                                disabled={loading}
+                                disabled={loadingMore}
                                 className="clean-button text-white px-8 py-3 rounded-xl font-medium transition-all duration-300 hover:scale-105 disabled:opacity-50"
                             >
-                                {loading ? (
+                                {loadingMore ? (
                                     <div className="flex items-center space-x-2">
                                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                                         <span>Loading...</span>

@@ -240,6 +240,17 @@ export default function HomeServicesProfessional() {
                                             ))}
                                         </div>
 
+                                        <div className="flex space-x-4 mb-4">
+                                            <PreBookingInquiry
+                                                providerId={professional.id.toString()}
+                                                providerName={professional.name}
+                                                providerImage={professional.image}
+                                                buttonText="💬 Send Message"
+                                                className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-lg font-bold hover:from-green-700 hover:to-emerald-700 transition-all duration-300"
+                                                service={serviceData || undefined}
+                                            />
+                                        </div>
+
                                         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                                             <div className="flex items-start gap-3">
                                                 <div className="flex-shrink-0">
@@ -250,7 +261,7 @@ export default function HomeServicesProfessional() {
                                                 <div>
                                                     <p className="text-sm font-medium text-amber-800">💬 Ready to connect?</p>
                                                     <p className="text-sm text-amber-700 mt-1">
-                                                        Ask questions about services in the booking section. Calls and full messaging unlock after booking confirmation.
+                                                        Ask questions about services before booking. Full messaging and calls unlock after booking confirmation.
                                                     </p>
                                                 </div>
                                             </div>
@@ -259,16 +270,18 @@ export default function HomeServicesProfessional() {
                                 </div>
 
                                 {/* Services Offered */}
-                                <div className="mb-6">
-                                    <h3 className="text-xl font-bold text-gray-800 mb-3">🏠 Services Offered</h3>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                        {professional.services.map((service, index) => (
-                                            <div key={index} className="bg-green-50 text-green-700 px-4 py-2 rounded-lg text-center">
-                                                {service}
-                                            </div>
-                                        ))}
+                                {professional.services && professional.services.length > 0 && (
+                                    <div className="mb-6">
+                                        <h3 className="text-xl font-bold text-gray-800 mb-3">🏠 Services Offered</h3>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                            {professional.services.map((service: any, index: number) => (
+                                                <div key={index} className="bg-green-50 text-green-700 px-4 py-2 rounded-lg text-center font-medium">
+                                                    {typeof service === 'string' ? service : (service && (service.name || service.title)) || 'Service'}
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
+                                )}
 
                                 {/* About */}
                                 <div className="mb-6">
@@ -406,12 +419,13 @@ export default function HomeServicesProfessional() {
                                 </button>
 
                                 {/* Pre-booking Inquiry */}
-                                {professional && (
+                                {professional && serviceData && (
                                     <PreBookingInquiry
                                         providerId={professional.id.toString()}
                                         providerName={professional.name}
                                         providerImage={professional.image}
                                         className="w-full"
+                                        service={serviceData}
                                     />
                                 )}
 

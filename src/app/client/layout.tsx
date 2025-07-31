@@ -142,7 +142,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
                             height={32}
                             className="w-8 h-8"
                         />
-                        <span className="text-xl font-bold text-gray-900 dark:text-white">EasyBuk</span>
+                        <span className="text-xl font-bold text-gray-900 dark:text-white navbar-brand">EasyBuk</span>
                     </Link>
                     <button
                         onClick={() => setIsSidebarOpen(false)}
@@ -234,7 +234,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
                                 height={24}
                                 className="w-6 h-6"
                             />
-                            <span className="text-lg font-bold text-gray-900 dark:text-white">EasyBuk</span>
+                            <span className="text-lg font-bold text-gray-900 dark:text-white navbar-brand">EasyBuk</span>
                         </Link>
                         <div className="w-10"></div> {/* Spacer for balance */}
                     </div>
