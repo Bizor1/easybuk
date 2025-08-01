@@ -144,6 +144,20 @@ export default function Home() {
     });
   }, []);
 
+  // Enhanced video readiness check (immediate for cached videos)
+  const checkVideoReadiness = useCallback((videoElement: HTMLVideoElement, index: number) => {
+    if (videoElement && (
+      videoElement.readyState >= 3 || 
+      videoElement.duration > 0 || 
+      videoElement.currentTime > 0 ||
+      videoElement.networkState === 3 // NETWORK_LOADED
+    )) {
+      handleVideoLoad(index);
+      return true;
+    }
+    return false;
+  }, [handleVideoLoad]);
+
   const handleVideoError = useCallback((index: number) => {
     setVideoError(prev => {
       const newError = [...prev];
@@ -170,7 +184,69 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [nextVideo]);
 
-  // Videos are now preloaded directly in the DOM, no separate preloading needed
+  // Handle video switching for mobile compatibility and check cached videos
+  useEffect(() => {
+    // Pause all videos first
+    const allVideos = document.querySelectorAll('video');
+    allVideos.forEach(video => {
+      video.pause();
+    });
+
+    // Play only the current video
+    const currentVideo = document.querySelector(`video[style*="display: block"]`) as HTMLVideoElement;
+    if (currentVideo) {
+      // Check if video is already loaded (cached)
+      checkVideoReadiness(currentVideo, currentVideoIndex);
+      
+      currentVideo.play().catch(() => {
+        // Autoplay failed, which is normal on some mobile browsers
+        console.log('Autoplay prevented by browser policy');
+      });
+    }
+  }, [currentVideoIndex, handleVideoLoad, checkVideoReadiness]);
+
+  // Check all videos on mount for cached content
+  useEffect(() => {
+    const checkAllVideos = () => {
+      videos.forEach((_, index) => {
+        const videoElement = document.querySelector(`video:nth-of-type(${index + 1})`) as HTMLVideoElement;
+        if (videoElement) {
+          checkVideoReadiness(videoElement, index);
+        }
+      });
+    };
+
+    // Check immediately
+    const immediateTimer = setTimeout(checkAllVideos, 50);
+    
+    // Check again after a short delay for cached content
+    const delayedTimer = setTimeout(checkAllVideos, 500);
+
+    return () => {
+      clearTimeout(immediateTimer);
+      clearTimeout(delayedTimer);
+    };
+  }, [videos, checkVideoReadiness]);
+
+  // Fallback to hide loading spinners after reasonable time (for cached videos)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setVideosLoaded(prev => {
+        const newLoaded = [...prev];
+        // If video is still "loading" after 2 seconds, assume it's ready (cached)
+        if (!newLoaded[currentVideoIndex]) {
+          const currentVideo = document.querySelector(`video[style*="display: block"]`) as HTMLVideoElement;
+          // More aggressive check for cached content
+          if (currentVideo && (currentVideo.readyState >= 1 || currentVideo.duration > 0 || currentVideo.networkState === 3)) {
+            newLoaded[currentVideoIndex] = true;
+          }
+        }
+        return newLoaded;
+      });
+    }, 2000); // Reduced from 3 seconds to 2 seconds
+
+    return () => clearTimeout(timer);
+  }, [currentVideoIndex]);
 
   const features = useMemo(() => [
     {
@@ -686,19 +762,35 @@ export default function Home() {
           <div className="relative max-w-5xl mx-auto animate-fadeInUp delay-300">
             {/* Main Video Container */}
             <div className="relative aspect-video rounded-3xl overflow-hidden shadow-2xl">
-              {/* All videos stay in DOM, only visibility changes */}
+              {/* All videos stay in DOM, mobile-optimized visibility */}
               {videos.map((video, index) => (
                 <div key={index} className={`absolute inset-0 transition-opacity duration-500 ${index === currentVideoIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
                   }`}>
                   {!videoError[index] ? (
-                    <video
+                                        <video
                       autoPlay={index === currentVideoIndex}
                       muted
                       loop
-                      preload="auto"
+                      playsInline
+                      preload={index === currentVideoIndex ? "auto" : "metadata"}
                       className="w-full h-full object-cover"
                       onLoadedData={() => handleVideoLoad(index)}
+                      onCanPlay={() => handleVideoLoad(index)}
+                      onLoadedMetadata={(e) => {
+                        // For cached videos, this fires immediately
+                        const videoElement = e.currentTarget as HTMLVideoElement;
+                        checkVideoReadiness(videoElement, index);
+                      }}
+                      ref={(el) => {
+                        // Check immediately when element is created (for cached videos)
+                        if (el) {
+                          setTimeout(() => checkVideoReadiness(el, index), 10);
+                        }
+                      }}
                       onError={() => handleVideoError(index)}
+                      style={{ 
+                        display: index === currentVideoIndex ? 'block' : 'none'
+                      }}
                     >
                       <source src={video.url} type="video/mp4" />
                       Your browser does not support the video tag.
@@ -765,7 +857,7 @@ export default function Home() {
                 onClick={(e) => {
                   // Find the currently visible video element
                   const videoContainer = e.currentTarget.parentElement;
-                  const currentVideo = videoContainer?.querySelector(`div:nth-child(${currentVideoIndex + 1}) video`) as HTMLVideoElement;
+                  const currentVideo = videoContainer?.querySelector(`video[style*="display: block"]`) as HTMLVideoElement;
                   if (currentVideo) {
                     currentVideo.muted = !currentVideo.muted;
                     e.currentTarget.textContent = currentVideo.muted ? '🔇' : '🔊';
@@ -777,20 +869,7 @@ export default function Home() {
                 🔇
               </button>
 
-              {/* 3D Navigation Arrows */}
-              <button
-                onClick={prevVideo}
-                className="video-nav-arrow absolute left-4 top-1/2 -translate-y-1/2 w-14 h-14 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white text-xl font-bold transition-all duration-300 hover:bg-white/30 hover:scale-110 hover:-translate-x-1 border border-white/30 shadow-lg z-30"
-              >
-                ‹
-              </button>
 
-              <button
-                onClick={nextVideo}
-                className="video-nav-arrow absolute right-4 top-1/2 -translate-y-1/2 w-14 h-14 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white text-xl font-bold transition-all duration-300 hover:bg-white/30 hover:scale-110 hover:translate-x-1 border border-white/30 shadow-lg z-30"
-              >
-                ›
-              </button>
             </div>
 
             {/* Video Indicators */}
