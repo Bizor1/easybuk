@@ -96,14 +96,8 @@ export default function CategoryNavbar({ backText, backHref, hoverColor, bgGradi
                         <Link href="/contact" className="btn-secondary navbar-button">Contact Us</Link>
                     </div>
 
-                    {/* Mobile Navigation */}
-                    <div className="md:hidden flex items-center space-x-2">
-                        {/* Notification Bell for Mobile */}
-                        {user && (
-                            <NotificationBell userType={user.roles.includes('PROVIDER') ? 'PROVIDER' : 'CLIENT'} />
-                        )}
-
-                        {/* Mobile Menu Button */}
+                    {/* Mobile Navigation - Only hamburger menu */}
+                    <div className="md:hidden">
                         <button
                             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                             className="p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
@@ -136,18 +130,22 @@ export default function CategoryNavbar({ backText, backHref, hoverColor, bgGradi
                             {/* User Section */}
                             {user ? (
                                 <div className="space-y-2">
-                                    <div className="flex items-center space-x-3 px-3 py-2">
-                                        <Image
-                                            src={user.image || '/default-avatar.svg'}
-                                            alt={user.name || 'User'}
-                                            width={32}
-                                            height={32}
-                                            className="w-8 h-8 rounded-full"
-                                        />
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</p>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
+                                    <div className="flex items-center justify-between px-3 py-2">
+                                        <div className="flex items-center space-x-3">
+                                            <Image
+                                                src={user.image || '/default-avatar.svg'}
+                                                alt={user.name || 'User'}
+                                                width={32}
+                                                height={32}
+                                                className="w-8 h-8 rounded-full"
+                                            />
+                                            <div>
+                                                <p className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
+                                            </div>
                                         </div>
+                                        {/* Notification Bell in Mobile Menu */}
+                                        <NotificationBell userType={user.roles.includes('PROVIDER') ? 'PROVIDER' : 'CLIENT'} />
                                     </div>
                                     <Link
                                         href={user.roles.includes('PROVIDER') ? '/provider/dashboard' : '/client/dashboard'}

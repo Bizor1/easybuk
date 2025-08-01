@@ -1,18 +1,60 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
-import NotificationBell from '@/components/NotificationBell';
+import CategoryNavbar from '@/components/CategoryNavbar';
 
 export default function Technical() {
     const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
     const [searchLocation, setSearchLocation] = useState('');
     const [searchService, setSearchService] = useState('');
+    const [expandedDescriptions, setExpandedDescriptions] = useState<{ [key: number]: boolean }>({});
+    const [sortBy, setSortBy] = useState('rating'); // Default sort by rating
 
-    // Get authentication state
-    const { user, logout, loading: authLoading } = useAuth();
+    // Toggle description expansion
+    const toggleDescription = (professionalId: number) => {
+        setExpandedDescriptions(prev => ({
+            ...prev,
+            [professionalId]: !prev[professionalId]
+        }));
+    };
+
+    // Truncate description helper
+    const truncateDescription = (description: string, maxLength: number = 100) => {
+        if (!description) return '';
+        return description.length <= maxLength
+            ? description
+            : description.substring(0, maxLength) + '...';
+    };
+
+    // Sort professionals helper
+    const sortProfessionals = (professionals: any[], sortOption: string) => {
+        const sorted = [...professionals];
+
+        switch (sortOption) {
+            case 'rating':
+                return sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+            case 'price':
+                return sorted.sort((a, b) => {
+                    const priceA = parseFloat((a.consultation || '0').replace(/[^\d.]/g, ''));
+                    const priceB = parseFloat((b.consultation || '0').replace(/[^\d.]/g, ''));
+                    return priceA - priceB;
+                });
+            case 'experience':
+                return sorted.sort((a, b) => {
+                    const expA = parseFloat((a.experience || '0').replace(/[^\d.]/g, ''));
+                    const expB = parseFloat((b.experience || '0').replace(/[^\d.]/g, ''));
+                    return expB - expA;
+                });
+            case 'reviews':
+                return sorted.sort((a, b) => (b.reviews || 0) - (a.reviews || 0));
+            default:
+                return sorted;
+        }
+    };
+
 
     // Banner carousel data with technical service themes
     const bannerAds = [
@@ -50,6 +92,11 @@ export default function Technical() {
     const [technicalProfessionals, setTechnicalProfessionals] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    // Computed sorted professionals
+    const sortedProfessionals = useMemo(() => {
+        return sortProfessionals(technicalProfessionals, sortBy);
+    }, [technicalProfessionals, sortBy]);
 
     // Fetch real technical professionals and services
     useEffect(() => {
@@ -167,79 +214,12 @@ export default function Technical() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-orange-50 via-gray-50 to-red-50">
             {/* Navigation */}
-            <nav className="fixed top-0 left-0 right-0 z-50 glass backdrop-blur-md">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center h-16">
-                        <Link href="/" className="flex items-center space-x-3">
-                            <Image
-                                src="https://res.cloudinary.com/duhfv8nqy/image/upload/v1749030696/easybuklogo_ity2xt.png"
-                                alt="EasyBuk Logo"
-                                width={40}
-                                height={40}
-                                className="w-10 h-10"
-                            />
-                            <span className="text-2xl font-bold text-gradient-mixed navbar-brand">EasyBuk</span>
-                        </Link>
-
-                        <div className="flex items-center space-x-4">
-                            <Link href="/" className="text-gray-700 hover:text-orange-600 transition-colors">← Back to Home</Link>
-
-                            {/* Authentication Section */}
-                            {authLoading ? (
-                                <div className="animate-pulse bg-gray-200 h-10 w-20 rounded-lg"></div>
-                            ) : user ? (
-                                <div className="flex items-center space-x-3">
-                                    {/* Notification Bell */}
-                                    <NotificationBell userType={user.roles.includes('PROVIDER') ? 'PROVIDER' : 'CLIENT'} />
-
-                                    <div className="flex items-center space-x-2">
-                                        <Image
-                                            src={user.image || '/default-avatar.svg'}
-                                            alt={user.name || 'User'}
-                                            width={32}
-                                            height={32}
-                                            className="w-8 h-8 rounded-full"
-                                        />
-                                        <div className="relative group">
-                                            <button className="flex items-center space-x-1 text-gray-700 hover:text-orange-600 transition-colors">
-                                                <span className="text-sm font-medium">{user.name}</span>
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                                </svg>
-                                            </button>
-
-                                            <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                                                <div className="py-2">
-                                                    <Link
-                                                        href={user.roles.includes('PROVIDER') ? '/provider/dashboard' : '/client/dashboard'}
-                                                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                                                    >
-                                                        Dashboard
-                                                    </Link>
-                                                    <button
-                                                        onClick={logout}
-                                                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                                                    >
-                                                        Sign Out
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="flex items-center space-x-3">
-                                    <Link href="/auth/login" className="text-gray-700 hover:text-orange-600 transition-colors">Sign In</Link>
-                                    <Link href="/auth/signup" className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white px-4 py-2 rounded-lg transition-all duration-300">Sign Up</Link>
-                                    <Link href="/auth/signup?role=provider" className="border border-orange-600 text-orange-600 hover:bg-orange-50 px-4 py-2 rounded-lg transition-colors">For Providers</Link>
-                                </div>
-                            )}
-
-                            <Link href="/contact" className="btn-secondary">Contact Us</Link>
-                        </div>
-                    </div>
-                </div>
-            </nav>
+            <CategoryNavbar
+                backText="← Back to Home"
+                backHref="/"
+                hoverColor="text-orange-600 dark:hover:text-orange-400"
+                bgGradient="from-orange-50 via-gray-50 to-red-50"
+            />
 
             {/* Hero Banner Carousel */}
             <section className="relative pt-16 h-screen overflow-hidden">
@@ -301,72 +281,134 @@ export default function Technical() {
                             <div className="absolute -inset-1 bg-gradient-to-r from-orange-600/20 to-red-600/20 rounded-3xl blur-xl group-hover:blur-2xl transition-all duration-300"></div>
 
                             {/* Main search container */}
-                            <div className="relative bg-white/10 backdrop-blur-2xl rounded-2xl p-6 shadow-2xl border border-white/20 hover:border-white/30 transition-all duration-300">
-                                {/* Subtle background pattern */}
-                                <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent rounded-2xl"></div>
+                            <div className="relative bg-white/10 backdrop-blur-3xl rounded-2xl sm:rounded-full px-3 sm:px-6 py-3 sm:py-3 shadow-2xl border border-white/20 hover:border-white/30 transition-all duration-300">
 
-                                <div className="relative z-10">
-                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                                        <div className="space-y-2">
-                                            <div className="relative">
-                                                <select
-                                                    value={searchLocation}
-                                                    onChange={(e) => setSearchLocation(e.target.value)}
-                                                    className="w-full px-4 py-4 pr-10 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder-white/60 focus:ring-2 focus:ring-orange-400/50 focus:border-white/40 transition-all duration-300 hover:bg-white/15 appearance-none cursor-pointer"
-                                                >
-                                                    <option value="" className="bg-gray-800 text-white">📍 Select Location</option>
-                                                    <option value="accra" className="bg-gray-800 text-white">Accra</option>
-                                                    <option value="kumasi" className="bg-gray-800 text-white">Kumasi</option>
-                                                    <option value="tamale" className="bg-gray-800 text-white">Tamale</option>
-                                                    <option value="tema" className="bg-gray-800 text-white">Tema</option>
-                                                </select>
-                                                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                                    <svg className="w-5 h-5 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                                    </svg>
-                                                </div>
+                                {/* Mobile Layout (Stacked) */}
+                                <div className="block sm:hidden space-y-3">
+                                    {/* Row 1: Location and Service */}
+                                    <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                            <select
+                                                value={searchLocation}
+                                                onChange={(e) => setSearchLocation(e.target.value)}
+                                                className="w-full px-3 py-3 bg-white/10 backdrop-blur-md border-0 rounded-full text-white text-sm placeholder-white/70 focus:ring-2 focus:ring-orange-400/50 transition-all duration-300 hover:bg-white/15 appearance-none cursor-pointer"
+                                            >
+                                                <option value="">📍 Location</option>
+                                                <option value="accra">Accra</option>
+                                                <option value="kumasi">Kumasi</option>
+                                                <option value="tamale">Tamale</option>
+                                                <option value="tema">Tema</option>
+                                            </select>
+                                            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                                <svg className="w-4 h-4 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                </svg>
                                             </div>
                                         </div>
-
-                                        <div className="space-y-2">
-                                            <div className="relative">
-                                                <select
-                                                    value={searchService}
-                                                    onChange={(e) => setSearchService(e.target.value)}
-                                                    className="w-full px-4 py-4 pr-10 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder-white/60 focus:ring-2 focus:ring-orange-400/50 focus:border-white/40 transition-all duration-300 hover:bg-white/15 appearance-none cursor-pointer"
-                                                >
-                                                    <option value="" className="bg-gray-800 text-white">🔧 Technical Service</option>
-                                                    <option value="auto" className="bg-gray-800 text-white">Auto Repair</option>
-                                                    <option value="electronics" className="bg-gray-800 text-white">Electronics Repair</option>
-                                                    <option value="appliances" className="bg-gray-800 text-white">Appliance Repair</option>
-                                                    <option value="it" className="bg-gray-800 text-white">IT Support</option>
-                                                    <option value="hvac" className="bg-gray-800 text-white">HVAC Services</option>
-                                                </select>
-                                                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                                    <svg className="w-5 h-5 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                                    </svg>
-                                                </div>
+                                        <div className="relative flex-1">
+                                            <select
+                                                value={searchService}
+                                                onChange={(e) => setSearchService(e.target.value)}
+                                                className="w-full px-3 py-3 bg-white/10 backdrop-blur-md border-0 rounded-full text-white text-sm placeholder-white/70 focus:ring-2 focus:ring-orange-400/50 transition-all duration-300 hover:bg-white/15 appearance-none cursor-pointer"
+                                            >
+                                                <option value="">🔧 Service</option>
+                                                <option value="auto">Auto Repair</option>
+                                                <option value="electronics">Electronics Repair</option>
+                                                <option value="appliances">Appliance Repair</option>
+                                                <option value="it">IT Support</option>
+                                                <option value="hvac">HVAC Services</option>
+                                            </select>
+                                            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                                <svg className="w-4 h-4 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                </svg>
                                             </div>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <div className="relative">
-                                                <input
-                                                    type="text"
-                                                    placeholder="💰 Budget (e.g., GH₵40-80)"
-                                                    className="w-full px-4 py-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder-white/60 focus:ring-2 focus:ring-orange-400/50 focus:border-white/40 transition-all duration-300 hover:bg-white/15"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <button className="w-full bg-gradient-to-r from-orange-500/80 to-red-500/80 backdrop-blur-md text-white py-4 px-6 rounded-xl font-bold text-lg hover:from-orange-600/90 hover:to-red-600/90 transition-all duration-300 hover:scale-105 shadow-lg flex items-center justify-center space-x-2 border border-white/20">
-                                                <span>🔍</span>
-                                                <span>Find Technicians</span>
-                                            </button>
                                         </div>
                                     </div>
+
+                                    {/* Row 2: Budget and Keywords */}
+                                    <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                            <input
+                                                type="text"
+                                                placeholder="💰 Budget"
+                                                className="w-full px-3 py-3 bg-white/10 backdrop-blur-md border-0 rounded-full text-white text-sm placeholder-white/70 focus:ring-2 focus:ring-orange-400/50 transition-all duration-300 hover:bg-white/15"
+                                            />
+                                        </div>
+                                        <div className="relative flex-1">
+                                            <input
+                                                type="text"
+                                                placeholder="🔍 Keywords"
+                                                className="w-full px-3 py-3 bg-white/10 backdrop-blur-md border-0 rounded-full text-white text-sm placeholder-white/70 focus:ring-2 focus:ring-orange-400/50 transition-all duration-300 hover:bg-white/15"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Row 3: Action Buttons */}
+                                    <div className="flex gap-2">
+                                        <button className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white px-4 py-3 rounded-full font-semibold text-sm transition-all duration-300 hover:scale-105 shadow-lg flex items-center justify-center gap-2 border border-white/20">
+                                            <span>🔍</span>
+                                            <span>Search</span>
+                                        </button>
+                                        <button className="bg-white/20 hover:bg-white/30 text-white px-4 py-3 rounded-full font-medium text-sm transition-all duration-300 border border-white/20">
+                                            Reset
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Desktop Layout (Horizontal) */}
+                                <div className="hidden sm:grid sm:grid-cols-4 gap-4 items-end">
+                                    <div className="relative">
+                                        <select
+                                            value={searchLocation}
+                                            onChange={(e) => setSearchLocation(e.target.value)}
+                                            className="w-full px-4 py-4 pr-10 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder-white/60 focus:ring-2 focus:ring-orange-400/50 focus:border-white/40 transition-all duration-300 hover:bg-white/15 appearance-none cursor-pointer"
+                                        >
+                                            <option value="" className="bg-gray-800 text-white">📍 Select Location</option>
+                                            <option value="accra" className="bg-gray-800 text-white">Accra</option>
+                                            <option value="kumasi" className="bg-gray-800 text-white">Kumasi</option>
+                                            <option value="tamale" className="bg-gray-800 text-white">Tamale</option>
+                                            <option value="tema" className="bg-gray-800 text-white">Tema</option>
+                                        </select>
+                                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                            <svg className="w-5 h-5 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </div>
+                                    </div>
+
+                                    <div className="relative">
+                                        <select
+                                            value={searchService}
+                                            onChange={(e) => setSearchService(e.target.value)}
+                                            className="w-full px-4 py-4 pr-10 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder-white/60 focus:ring-2 focus:ring-orange-400/50 focus:border-white/40 transition-all duration-300 hover:bg-white/15 appearance-none cursor-pointer"
+                                        >
+                                            <option value="" className="bg-gray-800 text-white">🔧 Technical Service</option>
+                                            <option value="auto" className="bg-gray-800 text-white">Auto Repair</option>
+                                            <option value="electronics" className="bg-gray-800 text-white">Electronics Repair</option>
+                                            <option value="appliances" className="bg-gray-800 text-white">Appliance Repair</option>
+                                            <option value="it" className="bg-gray-800 text-white">IT Support</option>
+                                            <option value="hvac" className="bg-gray-800 text-white">HVAC Services</option>
+                                        </select>
+                                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                            <svg className="w-5 h-5 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </div>
+                                    </div>
+
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            placeholder="💰 Budget (e.g., GH₵40-80)"
+                                            className="w-full px-4 py-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder-white/60 focus:ring-2 focus:ring-orange-400/50 focus:border-white/40 transition-all duration-300 hover:bg-white/15"
+                                        />
+                                    </div>
+
+                                    <button className="w-full bg-gradient-to-r from-orange-500/80 to-red-500/80 backdrop-blur-md text-white py-4 px-6 rounded-xl font-bold text-lg hover:from-orange-600/90 hover:to-red-600/90 transition-all duration-300 hover:scale-105 shadow-lg flex items-center justify-center space-x-2 border border-white/20">
+                                        <span>🔍</span>
+                                        <span>Find Technicians</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -383,11 +425,15 @@ export default function Technical() {
                             <p className="text-xl text-gray-600">Certified technicians ready to solve your problems</p>
                         </div>
                         <div className="flex items-center space-x-4">
-                            <select className="px-4 py-2 border border-gray-300 rounded-lg">
-                                <option>Sort by Rating</option>
-                                <option>Sort by Price</option>
-                                <option>Sort by Experience</option>
-                                <option>Sort by Distance</option>
+                            <select
+                                value={sortBy}
+                                onChange={(e) => setSortBy(e.target.value)}
+                                className="px-4 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-colors"
+                            >
+                                <option value="rating">Sort by Rating</option>
+                                <option value="price">Sort by Price (Low to High)</option>
+                                <option value="experience">Sort by Experience</option>
+                                <option value="reviews">Sort by Reviews</option>
                             </select>
                         </div>
                     </div>
@@ -411,95 +457,127 @@ export default function Technical() {
                         <div className="text-center py-12">
                             <div className="text-gray-400 text-6xl mb-4">🔧</div>
                             <h3 className="text-xl font-bold text-gray-900 mb-2">No Technical Professionals Found</h3>
-                            <p className="text-gray-600 mb-4">We&apos;re working to add more technical professionals to our platform.</p>
+                            <p className="text-gray-600 mb-4">We&apos;re working to add more technical experts to our platform.</p>
                             <Link href="/explore" className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg transition-colors inline-block">Explore Other Categories</Link>
                         </div>
                     )}
                     {!loading && !error && technicalProfessionals.length > 0 && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            {technicalProfessionals.map((professional: any) => (
-                                <div key={professional.id} className="bg-white rounded-2xl shadow-lg border-l-4 border-orange-500 hover:shadow-xl transition-all duration-300 overflow-hidden">
-                                    <div className="p-6">
-                                        <div className="flex items-start space-x-4">
-                                            <div className="relative">
+                            {sortedProfessionals.map((professional: any) => (
+                                <div key={professional.id} className="group relative">
+                                    {/* Glass Effect Background */}
+                                    <div className="absolute inset-0 bg-gradient-to-br from-orange-400/10 via-transparent to-red-400/10 rounded-3xl blur-xl group-hover:blur-2xl transition-all duration-500"></div>
+
+                                    <div className="relative bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 dark:border-slate-700/50 hover:shadow-3xl hover:scale-[1.02] transition-all duration-500 overflow-hidden">
+
+                                        {/* Large Image Section */}
+                                        <div className="relative">
+                                            <div className="aspect-[4/3] sm:aspect-[3/2] relative overflow-hidden">
                                                 <Image
                                                     src={professional.image}
                                                     alt={professional.name}
-                                                    width={80}
-                                                    height={80}
-                                                    className="rounded-full object-cover"
+                                                    fill
+                                                    className="object-cover"
+                                                    priority={false}
+                                                    unoptimized={false}
                                                 />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
+
+                                                {/* Verification Badge */}
                                                 {professional.verified && (
-                                                    <div className="absolute -bottom-1 -right-1 bg-orange-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">
+                                                    <div className="absolute top-3 right-3 bg-gradient-to-r from-orange-500 to-red-600 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg ring-2 ring-white">
                                                         ✓
                                                     </div>
                                                 )}
-                                            </div>
 
-                                            <div className="flex-1">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <h3 className="text-xl font-bold text-gray-800">{professional.name}</h3>
-                                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${professional.availability === 'Available now'
-                                                        ? 'bg-green-100 text-green-800'
+                                                {/* Availability Badge */}
+                                                <div className="absolute top-3 left-3">
+                                                    <span className={`px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-md ${professional.availability === 'Available now'
+                                                        ? 'bg-green-500/20 text-green-700 border border-green-500/30'
                                                         : professional.availability === 'Available today'
-                                                            ? 'bg-blue-100 text-blue-800'
-                                                            : 'bg-yellow-100 text-yellow-800'
+                                                            ? 'bg-blue-500/20 text-blue-700 border border-blue-500/30'
+                                                            : 'bg-amber-500/20 text-amber-700 border border-amber-500/30'
                                                         }`}>
-                                                        {typeof professional.availability === 'string' ? professional.availability : 'Available for booking'}
+                                                        {typeof professional.availability === 'string' ? professional.availability : 'Available'}
                                                     </span>
                                                 </div>
 
-                                                <p className="text-orange-600 font-medium mb-1">{professional.specialty}</p>
-                                                <p className="text-gray-500 text-sm mb-2">📍 {professional.location} • {professional.experience} experience</p>
-
-                                                <div className="flex items-center space-x-4 mb-3">
-                                                    <div className="flex items-center">
-                                                        <span className="text-yellow-400 mr-1">⭐</span>
-                                                        <span className="font-bold text-gray-800">{professional.rating}</span>
-                                                        <span className="text-gray-500 text-sm ml-1">({professional.reviews} reviews)</span>
+                                                {/* Price Overlay at Bottom */}
+                                                <div className="absolute bottom-3 right-3 text-right">
+                                                    <div className="text-xl sm:text-2xl font-bold text-white drop-shadow-lg">
+                                                        {professional.consultation}
                                                     </div>
-                                                    <div className="text-2xl font-bold text-orange-600">{professional.consultation}</div>
-                                                </div>
-
-                                                <div className="mb-4">
-                                                    <p className="text-sm text-gray-600 mb-1">Specializations:</p>
-                                                    <div className="flex flex-wrap gap-1">
-                                                        {professional.specializations.map((spec: string, index: number) => (
-                                                            <span key={index} className="bg-orange-50 text-orange-700 px-2 py-1 rounded text-xs">
-                                                                {spec}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                </div>
-
-                                                <div className="mb-4">
-                                                    <p className="text-sm text-gray-600 mb-1">Services:</p>
-                                                    <div className="flex flex-wrap gap-1">
-                                                        {professional.services.slice(0, 3).map((service: string, index: number) => (
-                                                            <span key={index} className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
-                                                                {service}
-                                                            </span>
-                                                        ))}
-                                                        {professional.services.length > 3 && (
-                                                            <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
-                                                                +{professional.services.length - 3} more
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex space-x-3">
-                                                    <Link
-                                                        href={`/technical/professional/${professional.id}`}
-                                                        className="flex-1 bg-gradient-to-r from-orange-600 to-red-600 text-white py-2 px-4 rounded-lg font-bold text-center hover:from-orange-700 hover:to-red-700 transition-all duration-300"
-                                                    >
-                                                        View Profile & Book
-                                                    </Link>
-                                                    <button className="border border-orange-600 text-orange-600 py-2 px-4 rounded-lg font-bold hover:bg-orange-50 transition-colors">
-                                                        📞 Call
-                                                    </button>
+                                                    <div className="text-xs text-white/80">per service</div>
                                                 </div>
                                             </div>
+                                        </div>
+
+                                        {/* Content Section */}
+                                        <div className="p-4">
+                                            {/* Name and Specialty */}
+                                            <div className="mb-3">
+                                                <h3 className="text-lg font-bold text-gray-800 dark:text-white group-hover:text-orange-600 transition-colors mb-1">
+                                                    {professional.name}
+                                                </h3>
+                                                <p className="text-orange-600 dark:text-orange-400 font-semibold text-sm">{professional.specialty}</p>
+                                                <p className="text-xs text-gray-600 dark:text-gray-300 flex items-center gap-1 mt-1">
+                                                    <span>📍</span>
+                                                    <span>{professional.location}</span>
+                                                    <span>•</span>
+                                                    <span>{professional.experience}</span>
+                                                </p>
+                                            </div>
+
+                                            {/* Rating */}
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <div className="flex items-center gap-1">
+                                                    <span className="text-yellow-400 text-sm">⭐</span>
+                                                    <span className="font-bold text-gray-800 dark:text-white text-sm">{professional.rating}</span>
+                                                </div>
+                                                <span className="text-xs text-gray-500 dark:text-gray-400">({professional.reviews} reviews)</span>
+                                            </div>
+
+                                            {/* Short Description */}
+                                            {professional.description && (
+                                                <div className="mb-3">
+                                                    <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                                                        {expandedDescriptions[professional.id]
+                                                            ? professional.description
+                                                            : truncateDescription(professional.description, 60)
+                                                        }
+                                                        {professional.description.length > 60 && (
+                                                            <button
+                                                                onClick={() => toggleDescription(professional.id)}
+                                                                className="ml-1 text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 font-medium underline focus:outline-none transition-colors"
+                                                            >
+                                                                {expandedDescriptions[professional.id] ? 'Less' : 'More'}
+                                                            </button>
+                                                        )}
+                                                    </p>
+                                                </div>
+                                            )}
+
+                                            {/* Specializations Tags */}
+                                            <div className="flex flex-wrap gap-1.5 mb-4">
+                                                {professional.specializations.slice(0, 2).map((spec: string, index: number) => (
+                                                    <span key={index} className="bg-orange-500/10 text-orange-700 dark:text-orange-300 px-2 py-1 rounded-full text-xs font-medium border border-orange-500/20">
+                                                        {spec}
+                                                    </span>
+                                                ))}
+                                                {professional.specializations.length > 2 && (
+                                                    <span className="bg-gray-500/10 text-gray-700 dark:text-gray-300 px-2 py-1 rounded-full text-xs font-medium border border-gray-500/20">
+                                                        +{professional.specializations.length - 2}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {/* Action Button */}
+                                            <Link
+                                                href={`/technical/professional/${professional.id}`}
+                                                className="block w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white py-3 px-4 rounded-2xl font-semibold text-center transition-all duration-300 hover:scale-105 shadow-lg text-sm"
+                                            >
+                                                View Profile & Book
+                                            </Link>
                                         </div>
                                     </div>
                                 </div>

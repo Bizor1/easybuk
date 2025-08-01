@@ -508,7 +508,7 @@ export default function ClientMessagesPage() {
                                                 {selectedInquiry.lastMessage && (
                                                     <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 mb-4 max-w-md mx-auto">
                                                         <p className="text-sm text-gray-700 dark:text-gray-300">
-                                                            "{selectedInquiry.lastMessage.slice(0, 100)}..."
+                                                            &ldquo;{selectedInquiry.lastMessage.slice(0, 100)}...&rdquo;
                                                         </p>
                                                     </div>
                                                 )}

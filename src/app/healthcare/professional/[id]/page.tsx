@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
+import CategoryNavbar from '@/components/CategoryNavbar';
 import BookingForm from '../../../../components/BookingForm';
 import PreBookingInquiry from '../../../../components/messaging/PreBookingInquiry';
 
@@ -117,27 +118,12 @@ export default function HealthcareProfessional() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
             {/* Navigation */}
-            <nav className="fixed top-0 left-0 right-0 z-50 glass backdrop-blur-md">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center h-16">
-                        <Link href="/" className="flex items-center space-x-3">
-                            <Image
-                                src="https://res.cloudinary.com/duhfv8nqy/image/upload/v1749030696/easybuklogo_ity2xt.png"
-                                alt="EasyBuk Logo"
-                                width={40}
-                                height={40}
-                                className="w-10 h-10"
-                            />
-                            <span className="text-2xl font-bold text-gradient-mixed navbar-brand">EasyBuk</span>
-                        </Link>
-
-                        <div className="flex items-center space-x-4">
-                            <Link href="/healthcare" className="navbar-link text-gray-700 hover:text-blue-600 transition-colors">← Back to Healthcare</Link>
-                            <Link href="/contact" className="btn-secondary navbar-button">Contact Us</Link>
-                        </div>
-                    </div>
-                </div>
-            </nav>
+            <CategoryNavbar
+                backText="← Back to Healthcare"
+                backHref="/healthcare"
+                hoverColor="text-blue-600"
+                bgGradient="from-blue-50 via-white to-green-50"
+            />
 
             {/* Professional Profile Section */}
             <section className="pt-20 pb-16">

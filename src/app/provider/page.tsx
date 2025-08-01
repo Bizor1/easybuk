@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
+import CategoryNavbar from '@/components/CategoryNavbar';
 import FloatingIcons from '../components/FloatingIcons';
 import TypewriterText from '../components/TypewriterText';
 
@@ -191,37 +192,13 @@ export default function ProviderPage() {
 
     return (
         <>
+            <CategoryNavbar
+                backText="For Clients"
+                backHref="/"
+                hoverColor="text-orange-600"
+                bgGradient="from-orange-500 to-yellow-500"
+            />
             <FloatingIcons />
-
-            {/* Navigation */}
-            <nav className="fixed top-0 left-0 right-0 z-50 glass backdrop-blur-md">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center h-16">
-                        <Link href="/" className="flex items-center space-x-3">
-                            <Image
-                                src="https://res.cloudinary.com/duhfv8nqy/image/upload/v1749030696/easybuklogo_ity2xt.png"
-                                alt="EasyBuk Logo"
-                                width={40}
-                                height={40}
-                                className="w-10 h-10"
-                            />
-                            <span className="text-2xl font-bold text-gradient-mixed navbar-brand">EasyBuk</span>
-                        </Link>
-
-                        <div className="hidden md:flex items-center space-x-8">
-                            <Link href="#how-it-works" className="navbar-link text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 transition-colors">How It Works</Link>
-                            <Link href="#success-stories" className="navbar-link text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 transition-colors">Success Stories</Link>
-                            <Link href="#pricing" className="navbar-link text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 transition-colors">Pricing</Link>
-                            <Link href="/" className="btn-secondary navbar-button">For Clients</Link>
-                        </div>
-
-                        {/* Mobile menu button */}
-                        <div className="md:hidden flex items-center space-x-3">
-
-                        </div>
-                    </div>
-                </div>
-            </nav>
 
             {/* Hero Section */}
             <section className="relative min-h-screen flex items-center justify-center bg-gradient-hero overflow-hidden">

@@ -31,6 +31,52 @@ export default function Healthcare() {
     const [searchService, setSearchService] = useState('');
     const [searchBudget, setSearchBudget] = useState('');
     const [searchKeywords, setSearchKeywords] = useState('');
+    const [expandedDescriptions, setExpandedDescriptions] = useState<{ [key: number]: boolean }>({});
+    const [sortBy, setSortBy] = useState('rating'); // Default sort by rating
+
+    // Toggle description expansion
+    const toggleDescription = (professionalId: number) => {
+        setExpandedDescriptions(prev => ({
+            ...prev,
+            [professionalId]: !prev[professionalId]
+        }));
+    };
+
+    // Truncate description helper
+    const truncateDescription = (description: string, maxLength: number = 100) => {
+        if (!description) return '';
+        return description.length <= maxLength
+            ? description
+            : description.substring(0, maxLength) + '...';
+    };
+
+    // Sort professionals helper
+    const sortProfessionals = (professionals: any[], sortOption: string) => {
+        const sorted = [...professionals];
+
+        switch (sortOption) {
+            case 'rating':
+                return sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+            case 'price':
+                return sorted.sort((a, b) => {
+                    // Extract numeric value from price strings like "GH₵60" or "GH₵40/hour"
+                    const priceA = parseFloat((a.consultation || '0').replace(/[^\d.]/g, ''));
+                    const priceB = parseFloat((b.consultation || '0').replace(/[^\d.]/g, ''));
+                    return priceA - priceB;
+                });
+            case 'experience':
+                return sorted.sort((a, b) => {
+                    // Extract numeric value from experience strings like "15 years"
+                    const expA = parseFloat((a.experience || '0').replace(/[^\d.]/g, ''));
+                    const expB = parseFloat((b.experience || '0').replace(/[^\d.]/g, ''));
+                    return expB - expA;
+                });
+            case 'reviews':
+                return sorted.sort((a, b) => (b.reviews || 0) - (a.reviews || 0));
+            default:
+                return sorted;
+        }
+    };
 
     // Banner carousel data
     const bannerAds = [
@@ -145,8 +191,9 @@ export default function Healthcare() {
             );
         }
 
-        return filtered;
-    }, [healthcareProfessionals, searchLocation, searchService, searchBudget, searchKeywords]);
+        // Apply sorting
+        return sortProfessionals(filtered, sortBy);
+    }, [healthcareProfessionals, searchLocation, searchService, searchBudget, searchKeywords, sortBy]);
 
     const error = isError ? 'Failed to load healthcare professionals' : null;
 
@@ -454,10 +501,15 @@ export default function Healthcare() {
                             <p className="text-xl text-gray-600">Verified doctors and nurses ready to help you</p>
                         </div>
                         <div className="flex items-center space-x-4">
-                            <select className="px-4 py-2 border border-gray-300 rounded-lg">
-                                <option>Sort by Rating</option>
-                                <option>Sort by Price</option>
-                                <option>Sort by Experience</option>
+                            <select
+                                value={sortBy}
+                                onChange={(e) => setSortBy(e.target.value)}
+                                className="px-4 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                            >
+                                <option value="rating">Sort by Rating</option>
+                                <option value="price">Sort by Price (Low to High)</option>
+                                <option value="experience">Sort by Experience</option>
+                                <option value="reviews">Sort by Reviews</option>
                             </select>
                         </div>
                     </div>
@@ -491,105 +543,119 @@ export default function Healthcare() {
 
                                     <div className="relative bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 dark:border-slate-700/50 hover:shadow-3xl hover:scale-[1.02] transition-all duration-500 overflow-hidden">
 
-                                        {/* Header with Image and Status */}
-                                        <div className="relative p-6 pb-0">
-                                            <div className="flex items-start justify-between mb-4">
-                                                <div className="relative">
-                                                    <div className="w-20 h-20 rounded-2xl overflow-hidden ring-4 ring-white/50 shadow-lg">
-                                                        <Image
-                                                            src={professional.image}
-                                                            alt={professional.name}
-                                                            width={80}
-                                                            height={80}
-                                                            className="w-full h-full object-cover"
-                                                        />
-                                                    </div>
-                                                    {professional.verified && (
-                                                        <div className="absolute -bottom-2 -right-2 bg-gradient-to-r from-blue-500 to-green-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg ring-2 ring-white">
-                                                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                            </svg>
-                                                        </div>
-                                                    )}
-                                                </div>
+                                        {/* Large Image Section */}
+                                        <div className="relative">
+                                            <div className="aspect-[4/3] sm:aspect-[3/2] relative overflow-hidden">
+                                                <Image
+                                                    src={professional.image}
+                                                    alt={professional.name}
+                                                    fill
+                                                    className="object-cover"
+                                                    priority={false}
+                                                    unoptimized={false}
+                                                />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
 
-                                                <div className="flex flex-col items-end gap-2">
+                                                {/* Verification Badge */}
+                                                {professional.verified && (
+                                                    <div className="absolute top-3 right-3 bg-gradient-to-r from-blue-500 to-green-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg ring-2 ring-white">
+                                                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                        </svg>
+                                                    </div>
+                                                )}
+
+                                                {/* Availability Badge */}
+                                                <div className="absolute top-3 left-3">
                                                     <span className={`px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-md ${professional.availability === 'Available now'
-                                                        ? 'bg-green-500/20 text-green-700 dark:text-green-300 border border-green-500/30'
+                                                        ? 'bg-green-500/20 text-green-700 border border-green-500/30'
                                                         : professional.availability === 'Available today'
-                                                            ? 'bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30'
-                                                            : 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                                                            ? 'bg-blue-500/20 text-blue-700 border border-blue-500/30'
+                                                            : 'bg-amber-500/20 text-amber-700 border border-amber-500/30'
                                                         }`}>
                                                         {typeof professional.availability === 'string' ? professional.availability : 'Available'}
                                                     </span>
+                                                </div>
 
-                                                    <div className="text-right">
-                                                        <div className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
-                                                            {professional.consultation}
-                                                        </div>
-                                                        <div className="text-xs text-gray-500 dark:text-gray-400">per consultation</div>
+                                                {/* Price Overlay at Bottom */}
+                                                <div className="absolute bottom-3 right-3 text-right">
+                                                    <div className="text-xl sm:text-2xl font-bold text-white drop-shadow-lg">
+                                                        {professional.consultation}
                                                     </div>
+                                                    <div className="text-xs text-white/80">per consultation</div>
                                                 </div>
                                             </div>
+                                        </div>
 
-                                            <div className="space-y-2">
-                                                <h3 className="text-xl font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                        {/* Content Section */}
+                                        <div className="p-4">
+                                            {/* Name and Specialty */}
+                                            <div className="mb-3">
+                                                <h3 className="text-lg font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors mb-1">
                                                     {professional.name}
                                                 </h3>
-                                                <p className="text-blue-600 dark:text-blue-400 font-semibold">{professional.specialty}</p>
-                                                <p className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-1">
+                                                <p className="text-blue-600 dark:text-blue-400 font-semibold text-sm">{professional.specialty}</p>
+                                                <p className="text-xs text-gray-600 dark:text-gray-300 flex items-center gap-1 mt-1">
                                                     <span>📍</span>
                                                     <span>{professional.location}</span>
                                                     <span>•</span>
-                                                    <span>{professional.experience} experience</span>
+                                                    <span>{professional.experience}</span>
                                                 </p>
                                             </div>
-                                        </div>
 
-                                        {/* Rating and Reviews */}
-                                        <div className="px-6 py-3">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="flex items-center gap-1">
-                                                        <span className="text-yellow-500 text-lg">⭐</span>
-                                                        <span className="font-bold text-gray-900 dark:text-white">{professional.rating}</span>
-                                                    </div>
-                                                    <span className="text-sm text-gray-500 dark:text-gray-400">({professional.reviews} reviews)</span>
+                                            {/* Rating */}
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <div className="flex items-center gap-1">
+                                                    <span className="text-yellow-500 text-sm">⭐</span>
+                                                    <span className="font-bold text-gray-900 dark:text-white text-sm">{professional.rating}</span>
                                                 </div>
-
-                                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                <span className="text-xs text-gray-500 dark:text-gray-400">({professional.reviews} reviews)</span>
+                                                <div className="text-xs text-gray-500 dark:text-gray-400 ml-auto hidden sm:block">
                                                     💬 {professional.languages.join(', ')}
                                                 </div>
                                             </div>
-                                        </div>
 
-                                        {/* Services Tags */}
-                                        <div className="px-6 pb-6">
-                                            <div className="flex flex-wrap gap-2 mb-4">
-                                                {professional.services.slice(0, 3).map((service, index) => (
-                                                    <span key={index} className="bg-blue-500/10 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full text-xs font-medium border border-blue-500/20 backdrop-blur-sm">
+                                            {/* Short Description */}
+                                            {professional.description && (
+                                                <div className="mb-3">
+                                                    <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                                                        {expandedDescriptions[professional.id]
+                                                            ? professional.description
+                                                            : truncateDescription(professional.description, 60)
+                                                        }
+                                                        {professional.description.length > 60 && (
+                                                            <button
+                                                                onClick={() => toggleDescription(professional.id)}
+                                                                className="ml-1 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium underline focus:outline-none transition-colors"
+                                                            >
+                                                                {expandedDescriptions[professional.id] ? 'Less' : 'More'}
+                                                            </button>
+                                                        )}
+                                                    </p>
+                                                </div>
+                                            )}
+
+                                            {/* Services Tags */}
+                                            <div className="flex flex-wrap gap-1.5 mb-4">
+                                                {professional.services.slice(0, 2).map((service: string, index: number) => (
+                                                    <span key={index} className="bg-blue-500/10 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-full text-xs font-medium border border-blue-500/20">
                                                         {service}
                                                     </span>
                                                 ))}
-                                                {professional.services.length > 3 && (
-                                                    <span className="bg-gray-500/10 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full text-xs font-medium border border-gray-500/20 backdrop-blur-sm">
-                                                        +{professional.services.length - 3} more
+                                                {professional.services.length > 2 && (
+                                                    <span className="bg-gray-500/10 text-gray-700 dark:text-gray-300 px-2 py-1 rounded-full text-xs font-medium border border-gray-500/20">
+                                                        +{professional.services.length - 2}
                                                     </span>
                                                 )}
                                             </div>
 
-                                            {/* Action Buttons */}
-                                            <div className="flex gap-3">
-                                                <Link
-                                                    href={`/healthcare/professional/${professional.id}`}
-                                                    className="flex-1 bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white py-3 px-4 rounded-2xl font-semibold text-center transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl backdrop-blur-sm border border-white/20"
-                                                >
-                                                    View Profile & Book
-                                                </Link>
-                                                <button className="bg-white/20 dark:bg-slate-700/50 backdrop-blur-md border border-blue-500/30 text-blue-600 dark:text-blue-400 py-3 px-4 rounded-2xl font-semibold hover:bg-blue-500/10 transition-all duration-300 hover:scale-105">
-                                                    💬
-                                                </button>
-                                            </div>
+                                            {/* Action Button */}
+                                            <Link
+                                                href={`/healthcare/professional/${professional.id}`}
+                                                className="block w-full bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white py-3 px-4 rounded-2xl font-semibold text-center transition-all duration-300 hover:scale-105 shadow-lg text-sm"
+                                            >
+                                                View Profile & Book
+                                            </Link>
                                         </div>
                                     </div>
                                 </div>

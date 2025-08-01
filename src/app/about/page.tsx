@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import CategoryNavbar from '@/components/CategoryNavbar';
 
 export default function About() {
     const values = [
@@ -64,29 +65,12 @@ export default function About() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-indigo-50">
-            {/* Navigation */}
-            <nav className="fixed top-0 left-0 right-0 z-50 glass backdrop-blur-md">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center h-16">
-                        <Link href="/" className="flex items-center space-x-3">
-                            <Image
-                                src="https://res.cloudinary.com/duhfv8nqy/image/upload/v1749030696/easybuklogo_ity2xt.png"
-                                alt="EasyBuk Logo"
-                                width={40}
-                                height={40}
-                                className="w-10 h-10"
-                            />
-                            <span className="text-2xl font-bold text-gradient-mixed">EasyBuk</span>
-                        </Link>
-
-                        <div className="flex items-center space-x-4">
-                            <Link href="/" className="text-gray-700 hover:text-indigo-600 transition-colors">← Back to Home</Link>
-                            <Link href="/contact" className="text-gray-700 hover:text-indigo-600 transition-colors">Contact</Link>
-                            <Link href="/careers" className="btn-secondary">Careers</Link>
-                        </div>
-                    </div>
-                </div>
-            </nav>
+            <CategoryNavbar
+                backText="← Back to Home"
+                backHref="/"
+                hoverColor="text-indigo-600"
+                bgGradient="from-gray-500 to-indigo-500"
+            />
 
             {/* Hero Section */}
             <section className="pt-20 pb-16 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">

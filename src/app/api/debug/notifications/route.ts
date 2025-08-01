@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
                 message: notification.message,
                 isRead: notification.isRead,
                 createdAt: notification.createdAt,
-                data: notification.data ? JSON.parse(notification.data) : null
+                data: notification.data && typeof notification.data === 'string' ? JSON.parse(notification.data) : notification.data
             }))
         });
 

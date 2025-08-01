@@ -172,7 +172,7 @@ export default function ProviderDashboard() {
             hasInitialized.current = true;
             mutateSetupStatus();
         }
-    }, [user]);
+    }, [user, mutateSetupStatus]);
 
     // Separate effect for dashboard data when setup is complete
     useEffect(() => {

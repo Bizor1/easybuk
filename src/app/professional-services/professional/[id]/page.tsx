@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
+import CategoryNavbar from '@/components/CategoryNavbar';
 import BookingForm from '@/components/BookingForm';
 import PreBookingInquiry from '@/components/messaging/PreBookingInquiry';
 
@@ -183,27 +184,12 @@ export default function ProfessionalServicesProfessional() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50">
             {/* Navigation */}
-            <nav className="fixed top-0 left-0 right-0 z-50 glass backdrop-blur-md">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center h-16">
-                        <Link href="/" className="flex items-center space-x-3">
-                            <Image
-                                src="https://res.cloudinary.com/duhfv8nqy/image/upload/v1749030696/easybuklogo_ity2xt.png"
-                                alt="EasyBuk Logo"
-                                width={40}
-                                height={40}
-                                className="w-10 h-10"
-                            />
-                            <span className="text-2xl font-bold text-gradient-mixed">EasyBuk</span>
-                        </Link>
-
-                        <div className="flex items-center space-x-4">
-                            <Link href="/professional-services" className="text-gray-700 hover:text-purple-600 transition-colors">← Back to Professional Services</Link>
-                            <Link href="/contact" className="btn-secondary">Contact Us</Link>
-                        </div>
-                    </div>
-                </div>
-            </nav>
+            <CategoryNavbar
+                backText="← Back to Professional Services"
+                backHref="/professional-services"
+                hoverColor="text-purple-600"
+                bgGradient="from-purple-50 via-white to-indigo-50"
+            />
 
             {/* Professional Profile Section */}
             <section className="pt-20 pb-16">

@@ -4,8 +4,8 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
+import CategoryNavbar from '@/components/CategoryNavbar';
 import BookingForm from '@/components/BookingForm';
-import SimpleNotificationBell from '@/components/SimpleNotificationBell';
 import { useExploreData } from '@/hooks/useAPI';
 
 // Type definitions
@@ -103,8 +103,6 @@ export default function Explore() {
     const [selectedRating, setSelectedRating] = useState(0);
     const [isOnlineOnly, setIsOnlineOnly] = useState(false);
     const [nearMe, setNearMe] = useState(false);
-    const [liveCount, setLiveCount] = useState(2847);
-    const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
     const [showBookingForm, setShowBookingForm] = useState(false);
     const [selectedService, setSelectedService] = useState<any>(null);
     const observer = useRef<IntersectionObserver>();
@@ -201,31 +199,7 @@ export default function Explore() {
         return matchesCategory && matchesSearch;
     });
 
-    // Simulate live user count updates
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setLiveCount(prev => prev + Math.floor(Math.random() * 10) - 5);
-        }, 3000);
-        return () => clearInterval(interval);
-    }, []);
 
-    // Close dropdown when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            const target = event.target as Element;
-            if (!target.closest('.profile-dropdown')) {
-                setIsProfileDropdownOpen(false);
-            }
-        };
-
-        if (isProfileDropdownOpen) {
-            document.addEventListener('mousedown', handleClickOutside);
-        }
-
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [isProfileDropdownOpen]);
 
     // Function to handle booking
     const handleBookNow = (item: ExploreItem) => {
@@ -289,23 +263,7 @@ export default function Explore() {
         setSelectedService(null);
     };
 
-    // Close dropdown when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            const target = event.target as Element;
-            if (!target.closest('.profile-dropdown')) {
-                setIsProfileDropdownOpen(false);
-            }
-        };
 
-        if (isProfileDropdownOpen) {
-            document.addEventListener('mousedown', handleClickOutside);
-        }
-
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [isProfileDropdownOpen]);
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
@@ -416,140 +374,12 @@ export default function Explore() {
                 }
             `}</style>
 
-            {/* Navigation */}
-            <nav className="fixed top-0 left-0 right-0 z-50 glass backdrop-blur-md">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center h-16">
-                        <Link href="/" className="flex items-center space-x-3 group">
-                            <div className="relative">
-                                <Image
-                                    src="https://res.cloudinary.com/duhfv8nqy/image/upload/v1749030696/easybuklogo_ity2xt.png"
-                                    alt="EasyBuk Logo"
-                                    width={40}
-                                    height={40}
-                                    className="w-10 h-10 transition-transform group-hover:scale-110"
-                                />
-                                <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-orange-500 rounded-full opacity-0 group-hover:opacity-20 blur transition-opacity"></div>
-                            </div>
-                            <span className="text-2xl font-bold text-gradient-mixed navbar-brand">EasyBuk</span>
-                        </Link>
-
-                        <div className="flex items-center space-x-4">
-                            <div className="hidden md:flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-300">
-                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                                <span>{liveCount.toLocaleString()} online</span>
-                            </div>
-                            <Link href="/" className="navbar-link text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors">Home</Link>
-
-                            {authLoading ? (
-                                // Loading state
-                                <div className="flex items-center space-x-4">
-                                    <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-8 w-20 rounded"></div>
-                                    <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-8 w-8 rounded-full"></div>
-                                </div>
-                            ) : user ? (
-                                // Logged-in user navigation
-                                <div className="flex items-center space-x-4">
-                                    {/* Notification Bell - Only for Clients */}
-                                    {(user.roles.includes('CLIENT') || user.activeRole === 'CLIENT') && (
-                                        <div className="transform hover:scale-105 transition-transform">
-                                            <SimpleNotificationBell userType="CLIENT" />
-                                        </div>
-                                    )}
-
-                                    {/* Dashboard Link */}
-                                    <Link
-                                        href={user.activeRole === 'PROVIDER' ? '/provider/dashboard' : '/client/dashboard'}
-                                        className="navbar-link text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
-                                    >
-                                        Dashboard
-                                    </Link>
-
-                                    {/* Profile Dropdown */}
-                                    <div className="relative profile-dropdown">
-                                        <button
-                                            onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-                                            className="navbar-link flex items-center space-x-2 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
-                                        >
-                                            <Image
-                                                src={user.image || '/default-avatar.svg'}
-                                                alt={user.name || 'User'}
-                                                width={32}
-                                                height={32}
-                                                className="w-8 h-8 rounded-full ring-2 ring-transparent hover:ring-blue-500/30 transition-all"
-                                            />
-                                            <span className="hidden md:block font-medium">
-                                                {user.name?.split(' ')[0]}
-                                            </span>
-                                            <svg className={`w-4 h-4 transition-transform ${isProfileDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                            </svg>
-                                        </button>
-
-                                        {/* Dropdown Menu */}
-                                        {isProfileDropdownOpen && (
-                                            <div className="profile-dropdown absolute top-full right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 transition-all duration-300 z-50 backdrop-blur-xl animate-fadeInUp">
-                                                <div className="py-2">
-                                                    <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                                                        <p className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</p>
-                                                        <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
-                                                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">{user.activeRole || user.roles[0]} Account</p>
-                                                    </div>
-
-                                                    <Link
-                                                        href={user.activeRole === 'PROVIDER' ? '/provider/dashboard' : '/client/dashboard'}
-                                                        className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                                                        onClick={() => setIsProfileDropdownOpen(false)}
-                                                    >
-                                                        <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v2H8V5z" />
-                                                        </svg>
-                                                        Dashboard
-                                                    </Link>
-
-                                                    <Link
-                                                        href={user.activeRole === 'PROVIDER' ? '/provider/profile' : '/client/profile'}
-                                                        className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                                                        onClick={() => setIsProfileDropdownOpen(false)}
-                                                    >
-                                                        <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                                        </svg>
-                                                        Profile
-                                                    </Link>
-
-                                                    <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
-
-                                                    <button
-                                                        onClick={async () => {
-                                                            setIsProfileDropdownOpen(false);
-                                                            await logout();
-                                                            window.location.href = '/';
-                                                        }}
-                                                        className="flex items-center w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                                                    >
-                                                        <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                                                        </svg>
-                                                        Sign Out
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            ) : (
-                                // Guest navigation
-                                <div className="flex items-center space-x-4">
-                                    <Link href="/auth/login" className="navbar-link text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors">Sign In</Link>
-                                    <Link href="/auth/signup" className="btn-primary navbar-button">Sign Up</Link>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </nav>
+            <CategoryNavbar
+                backText="← Back to Home"
+                backHref="/"
+                hoverColor="text-blue-600"
+                bgGradient="from-blue-500 to-orange-500"
+            />
 
             {/* Hero Search Section */}
             <section className="relative pt-20 pb-8 overflow-hidden">
@@ -568,7 +398,7 @@ export default function Explore() {
                     <div className="text-center mb-8">
                         <div className="inline-flex items-center space-x-2 bg-blue-100 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-full px-4 py-2 mb-6">
                             <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                            <span className="text-blue-700 dark:text-blue-300 text-sm">{liveCount.toLocaleString()}+ professionals available now</span>
+                            <span className="text-blue-700 dark:text-blue-300 text-sm">2,800+ professionals available now</span>
                         </div>
 
                         <h1 className="text-5xl md:text-7xl font-bold text-gray-900 dark:text-white mb-4 leading-tight">
@@ -1157,14 +987,16 @@ export default function Explore() {
             </div>
 
             {/* Booking Form */}
-            {showBookingForm && selectedService && (
-                <BookingForm
-                    service={selectedService}
-                    category={selectedService.category?.toLowerCase() as any || 'professional'}
-                    onBookingComplete={handleBookingComplete}
-                    onClose={handleCloseBooking}
-                />
-            )}
+            {
+                showBookingForm && selectedService && (
+                    <BookingForm
+                        service={selectedService}
+                        category={selectedService.category?.toLowerCase() as any || 'professional'}
+                        onBookingComplete={handleBookingComplete}
+                        onClose={handleCloseBooking}
+                    />
+                )
+            }
         </div>
     );
 } 

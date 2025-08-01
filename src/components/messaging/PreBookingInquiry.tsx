@@ -55,6 +55,30 @@ export default function PreBookingInquiry({
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
+    // Mark messages as read
+    const markMessagesAsRead = useCallback(async () => {
+        try {
+            const response = await fetch('/api/messages/mark-read', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    providerId: providerId,
+                    conversationType: 'pre-booking'
+                })
+            });
+
+            if (response.ok) {
+                // Trigger notification bell refresh
+                window.dispatchEvent(new CustomEvent('notificationsChanged'));
+            }
+        } catch (error) {
+            console.error('Error marking messages as read:', error);
+        }
+    }, [providerId]);
+
     // Fetch existing pre-booking messages
     const fetchMessages = useCallback(async () => {
         if (!user || !isOpen) return;
@@ -84,31 +108,7 @@ export default function PreBookingInquiry({
         } finally {
             setLoading(false);
         }
-    }, [user, isOpen, providerId, providerName, providerImage]);
-
-    // Mark messages as read
-    const markMessagesAsRead = async () => {
-        try {
-            const response = await fetch('/api/messages/mark-read', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include',
-                body: JSON.stringify({
-                    providerId: providerId,
-                    conversationType: 'pre-booking'
-                })
-            });
-
-            if (response.ok) {
-                // Trigger notification bell refresh
-                window.dispatchEvent(new CustomEvent('notificationsChanged'));
-            }
-        } catch (error) {
-            console.error('Error marking messages as read:', error);
-        }
-    };
+    }, [user, isOpen, providerId, providerName, providerImage, markMessagesAsRead]);
 
     // Send pre-booking message
     const handleSendMessage = async () => {
