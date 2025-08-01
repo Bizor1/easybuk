@@ -10,6 +10,57 @@ import RoleSwitcher from '@/components/auth/RoleSwitcher';
 import NotificationBell from '@/components/NotificationBell';
 import { useAuth } from '@/contexts/AuthContext';
 
+// Memoized ServiceCard component to prevent unnecessary re-renders
+const ServiceCard = React.memo(({ service, index }: { service: any; index: number }) => {
+  const categoryRoutes: { [key: string]: string } = {
+    "Healthcare": "/healthcare",
+    "Technical Services": "/technical",
+    "Home Services": "/home-services",
+    "Professional Services": "/professional-services",
+    "Education & Training": "/education",
+    "Creative Services": "/creative"
+  };
+
+  const routePath = categoryRoutes[service.category] || "#";
+  const animationDelay = `${index * 0.1}s`;
+
+  return (
+    <div className={`card ${service.bgColor} animate-fadeInUp`} style={{ animationDelay }}>
+      <div className="relative h-48 mb-6 rounded-xl overflow-hidden">
+        <Image
+          src={service.image}
+          alt={service.category}
+          fill
+          className="object-cover"
+          loading="lazy"
+          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+        />
+        <div className="absolute inset-0 bg-black bg-opacity-20"></div>
+      </div>
+
+      <div className="flex items-center mb-4">
+        <span className="text-3xl mr-3">{service.icon}</span>
+        <h3 className="text-2xl font-bold text-gray-800">{service.category}</h3>
+      </div>
+
+      <ul className="space-y-2 mb-6">
+        {service.services.map((item: string, idx: number) => (
+          <li key={idx} className="flex items-center text-gray-600">
+            <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
+            {item}
+          </li>
+        ))}
+      </ul>
+
+      <Link href={routePath} className="btn-3d w-full block text-center">
+        Browse {service.category}
+      </Link>
+    </div>
+  );
+});
+
+ServiceCard.displayName = 'ServiceCard';
+
 export default function Home() {
   // State for dropdown menus
   const [isServicesDropdownOpen, setIsServicesDropdownOpen] = useState(false);
@@ -119,18 +170,63 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [nextVideo]);
 
-  // Preload videos for smooth navigation
+  // Preload videos for smooth navigation - run only once on mount
   useEffect(() => {
-    videos.forEach((video, index) => {
+    const videoElements: HTMLVideoElement[] = [];
+    const videoData = [
+      {
+        url: "https://res.cloudinary.com/duhfv8nqy/video/upload/v1749039634/A_ghanaian_man_202506041218_hv6ojf.mp4",
+        title: "Professional Consultation",
+        description: "Connect with verified experts across Ghana"
+      },
+      {
+        url: "https://res.cloudinary.com/duhfv8nqy/video/upload/v1749039571/A_black_man_202506041157_k7qtt1.mp4",
+        title: "Quality Service Delivery",
+        description: "Experience professional excellence"
+      },
+      {
+        url: "https://res.cloudinary.com/duhfv8nqy/video/upload/v1749039572/An_african_lady_202506041203_ye8ddl.mp4",
+        title: "Expert Professional Services",
+        description: "Skilled professionals across diverse fields"
+      }
+    ];
+
+    videoData.forEach((video, index) => {
       const videoElement = document.createElement('video');
       videoElement.preload = 'metadata';
       videoElement.src = video.url;
-      videoElement.addEventListener('loadedmetadata', () => handleVideoLoad(index));
-      videoElement.addEventListener('error', () => handleVideoError(index));
-    });
-  }, [videos, handleVideoLoad, handleVideoError]);
 
-  const features = [
+      const handleLoad = () => {
+        setVideosLoaded(prev => {
+          const newLoaded = [...prev];
+          newLoaded[index] = true;
+          return newLoaded;
+        });
+      };
+
+      const handleError = () => {
+        setVideoError(prev => {
+          const newError = [...prev];
+          newError[index] = true;
+          return newError;
+        });
+      };
+
+      videoElement.addEventListener('loadedmetadata', handleLoad);
+      videoElement.addEventListener('error', handleError);
+
+      videoElements.push(videoElement);
+    });
+
+    // Cleanup function to remove event listeners and video elements
+    return () => {
+      videoElements.forEach((videoElement) => {
+        videoElement.remove();
+      });
+    };
+  }, []); // Empty dependency array - run only once on mount
+
+  const features = useMemo(() => [
     {
       icon: "🎯",
       title: "Smart Matching",
@@ -161,9 +257,9 @@ export default function Home() {
       title: "Across Africa",
       description: "Available in major cities across Africa. Expanding rapidly to serve more communities."
     }
-  ];
+  ], []);
 
-  const services = [
+  const services = useMemo(() => [
     {
       category: "Healthcare",
       icon: "🏥",
@@ -206,9 +302,9 @@ export default function Home() {
       services: ["Graphic Design", "Photography", "Video Production", "Content Creation"],
       bgColor: "bg-gradient-to-br from-pink-50 to-pink-100"
     }
-  ];
+  ], []);
 
-  const testimonials = [
+  const testimonials = useMemo(() => [
     {
       name: "Dr. Sarah Okafor",
       role: "Family Physician, Lagos",
@@ -227,14 +323,14 @@ export default function Home() {
       image: "https://res.cloudinary.com/duhfv8nqy/image/upload/v1733764031/default-avatar_cugq40.png",
       quote: "Found an amazing tutor for my daughter within minutes. The quality of professionals on EasyBuk is outstanding."
     }
-  ];
+  ], []);
 
-  const stats = [
+  const stats = useMemo(() => [
     { number: "50K+", label: "Verified Professionals" },
     { number: "200K+", label: "Happy Clients" },
     { number: "15+", label: "African Cities" },
     { number: "4.9★", label: "Average Rating" }
-  ];
+  ], []);
 
   // Functions to handle dropdown delays
   const handleServicesMouseEnter = () => {
@@ -794,51 +890,9 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {services.map((service, index) => {
-              // Map service categories to their route paths
-              const categoryRoutes: { [key: string]: string } = {
-                "Healthcare": "/healthcare",
-                "Technical Services": "/technical",
-                "Home Services": "/home-services",
-                "Professional Services": "/professional-services",
-                "Education & Training": "/education",
-                "Creative Services": "/creative"
-              };
-
-              const routePath = categoryRoutes[service.category] || "#";
-
-              return (
-                <div key={index} className={`card ${service.bgColor} animate-fadeInUp`} style={{ animationDelay: `${index * 0.1}s` }}>
-                  <div className="relative h-48 mb-6 rounded-xl overflow-hidden">
-                    <Image
-                      src={service.image}
-                      alt={service.category}
-                      fill
-                      className="object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black bg-opacity-20"></div>
-                  </div>
-
-                  <div className="flex items-center mb-4">
-                    <span className="text-3xl mr-3">{service.icon}</span>
-                    <h3 className="text-2xl font-bold text-gray-800">{service.category}</h3>
-                  </div>
-
-                  <ul className="space-y-2 mb-6">
-                    {service.services.map((item, idx) => (
-                      <li key={idx} className="flex items-center text-gray-600">
-                        <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-
-                  <Link href={routePath} className="btn-3d w-full block text-center">
-                    Browse {service.category}
-                  </Link>
-                </div>
-              );
-            })}
+            {services.map((service, index) => (
+              <ServiceCard key={service.category} service={service} index={index} />
+            ))}
           </div>
         </div>
       </section>
