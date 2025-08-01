@@ -170,61 +170,7 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [nextVideo]);
 
-  // Preload videos for smooth navigation - run only once on mount
-  useEffect(() => {
-    const videoElements: HTMLVideoElement[] = [];
-    const videoData = [
-      {
-        url: "https://res.cloudinary.com/duhfv8nqy/video/upload/v1749039634/A_ghanaian_man_202506041218_hv6ojf.mp4",
-        title: "Professional Consultation",
-        description: "Connect with verified experts across Ghana"
-      },
-      {
-        url: "https://res.cloudinary.com/duhfv8nqy/video/upload/v1749039571/A_black_man_202506041157_k7qtt1.mp4",
-        title: "Quality Service Delivery",
-        description: "Experience professional excellence"
-      },
-      {
-        url: "https://res.cloudinary.com/duhfv8nqy/video/upload/v1749039572/An_african_lady_202506041203_ye8ddl.mp4",
-        title: "Expert Professional Services",
-        description: "Skilled professionals across diverse fields"
-      }
-    ];
-
-    videoData.forEach((video, index) => {
-      const videoElement = document.createElement('video');
-      videoElement.preload = 'metadata';
-      videoElement.src = video.url;
-
-      const handleLoad = () => {
-        setVideosLoaded(prev => {
-          const newLoaded = [...prev];
-          newLoaded[index] = true;
-          return newLoaded;
-        });
-      };
-
-      const handleError = () => {
-        setVideoError(prev => {
-          const newError = [...prev];
-          newError[index] = true;
-          return newError;
-        });
-      };
-
-      videoElement.addEventListener('loadedmetadata', handleLoad);
-      videoElement.addEventListener('error', handleError);
-
-      videoElements.push(videoElement);
-    });
-
-    // Cleanup function to remove event listeners and video elements
-    return () => {
-      videoElements.forEach((videoElement) => {
-        videoElement.remove();
-      });
-    };
-  }, []); // Empty dependency array - run only once on mount
+  // Videos are now preloaded directly in the DOM, no separate preloading needed
 
   const features = useMemo(() => [
     {
@@ -740,22 +686,47 @@ export default function Home() {
           <div className="relative max-w-5xl mx-auto animate-fadeInUp delay-300">
             {/* Main Video Container */}
             <div className="relative aspect-video rounded-3xl overflow-hidden shadow-2xl">
-              {!videoError[currentVideoIndex] ? (
-                <video
-                  key={currentVideoIndex}
-                  autoPlay
-                  muted
-                  loop
-                  preload="auto"
-                  className="w-full h-full object-cover"
-                  onLoadedData={() => handleVideoLoad(currentVideoIndex)}
-                  onError={() => handleVideoError(currentVideoIndex)}
-                >
-                  <source src={videos[currentVideoIndex].url} type="video/mp4" />
-                  Your browser does not support the video tag.
-                </video>
-              ) : (
-                <div className="w-full h-full bg-gray-800 flex items-center justify-center text-white">
+              {/* All videos stay in DOM, only visibility changes */}
+              {videos.map((video, index) => (
+                <div key={index} className={`absolute inset-0 transition-opacity duration-500 ${index === currentVideoIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
+                  }`}>
+                  {!videoError[index] ? (
+                    <video
+                      autoPlay={index === currentVideoIndex}
+                      muted
+                      loop
+                      preload="auto"
+                      className="w-full h-full object-cover"
+                      onLoadedData={() => handleVideoLoad(index)}
+                      onError={() => handleVideoError(index)}
+                    >
+                      <source src={video.url} type="video/mp4" />
+                      Your browser does not support the video tag.
+                    </video>
+                  ) : (
+                    <div className="w-full h-full bg-gray-800 flex items-center justify-center text-white">
+                      <div className="text-center">
+                        <div className="text-4xl mb-4">📹</div>
+                        <p className="text-lg">Video temporarily unavailable</p>
+                        <button
+                          onClick={() => setVideoError(prev => {
+                            const newError = [...prev];
+                            newError[index] = false;
+                            return newError;
+                          })}
+                          className="mt-4 px-4 py-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors"
+                        >
+                          Retry
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {/* Error overlay for current video */}
+              {videoError[currentVideoIndex] && (
+                <div className="absolute inset-0 bg-gray-800 flex items-center justify-center text-white z-20">
                   <div className="text-center">
                     <div className="text-4xl mb-4">📹</div>
                     <p className="text-lg">Video temporarily unavailable</p>
@@ -775,16 +746,16 @@ export default function Home() {
 
               {/* Loading Indicator */}
               {!videosLoaded[currentVideoIndex] && !videoError[currentVideoIndex] && (
-                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-20">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
                 </div>
               )}
 
               {/* Video Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none"></div>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none z-20"></div>
 
               {/* Video Info */}
-              <div className="absolute bottom-6 left-6 text-white video-info">
+              <div className="absolute bottom-6 left-6 text-white video-info z-30">
                 <h3 className="text-2xl font-bold mb-2">{videos[currentVideoIndex].title}</h3>
                 <p className="text-lg opacity-90">{videos[currentVideoIndex].description}</p>
               </div>
@@ -792,13 +763,15 @@ export default function Home() {
               {/* Audio Control Button */}
               <button
                 onClick={(e) => {
-                  const video = e.currentTarget.parentElement?.querySelector('video');
-                  if (video) {
-                    video.muted = !video.muted;
-                    e.currentTarget.textContent = video.muted ? '🔇' : '🔊';
+                  // Find the currently visible video element
+                  const videoContainer = e.currentTarget.parentElement;
+                  const currentVideo = videoContainer?.querySelector(`div:nth-child(${currentVideoIndex + 1}) video`) as HTMLVideoElement;
+                  if (currentVideo) {
+                    currentVideo.muted = !currentVideo.muted;
+                    e.currentTarget.textContent = currentVideo.muted ? '🔇' : '🔊';
                   }
                 }}
-                className="absolute top-4 right-4 w-12 h-12 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white text-xl hover:bg-white/30 transition-all duration-300"
+                className="absolute top-4 right-4 w-12 h-12 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white text-xl hover:bg-white/30 transition-all duration-300 z-30"
                 title={`Click to ${videos[currentVideoIndex] ? 'unmute' : 'mute'} video`}
               >
                 🔇
@@ -807,14 +780,14 @@ export default function Home() {
               {/* 3D Navigation Arrows */}
               <button
                 onClick={prevVideo}
-                className="video-nav-arrow absolute left-4 top-1/2 -translate-y-1/2 w-14 h-14 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white text-xl font-bold transition-all duration-300 hover:bg-white/30 hover:scale-110 hover:-translate-x-1 border border-white/30 shadow-lg"
+                className="video-nav-arrow absolute left-4 top-1/2 -translate-y-1/2 w-14 h-14 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white text-xl font-bold transition-all duration-300 hover:bg-white/30 hover:scale-110 hover:-translate-x-1 border border-white/30 shadow-lg z-30"
               >
                 ‹
               </button>
 
               <button
                 onClick={nextVideo}
-                className="video-nav-arrow absolute right-4 top-1/2 -translate-y-1/2 w-14 h-14 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white text-xl font-bold transition-all duration-300 hover:bg-white/30 hover:scale-110 hover:translate-x-1 border border-white/30 shadow-lg"
+                className="video-nav-arrow absolute right-4 top-1/2 -translate-y-1/2 w-14 h-14 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white text-xl font-bold transition-all duration-300 hover:bg-white/30 hover:scale-110 hover:translate-x-1 border border-white/30 shadow-lg z-30"
               >
                 ›
               </button>
